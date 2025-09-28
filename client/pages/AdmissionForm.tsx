@@ -224,20 +224,32 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/supabaseClient";
+import { COURSES } from "@/data/courses";
+import { useNavigate } from "react-router-dom";
 
 export default function AdmissionForm() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-  const [course, setCourse] = useState("Full-Stack Web Development");
+  const [course, setCourse] = useState(COURSES[0]?.name || "");
   const [startDate, setStartDate] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [voucher, setVoucher] = useState<null | {
+    id: string;
+    amount: number;
+    course: string;
+  }>(null);
+
+  const courseFee = (name: string) => COURSES.find((c) => c.name === name)?.fees || 0;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
+
+    const amount = courseFee(course);
 
     const { error } = await supabase.from("applications").insert([
       {
@@ -247,11 +259,10 @@ export default function AdmissionForm() {
         course,
         start_date: startDate || null,
         message: message || null,
-        status: "Pending",
         batch: "TBD",
         campus: "Main",
-        fee_total: 0,
-        fee_installments: [],
+        fee_total: amount,
+        fee_installments: [{ id: "V1", amount, dueDate: new Date().toISOString() }],
         documents: [],
       },
     ]);
@@ -263,46 +274,102 @@ export default function AdmissionForm() {
       return;
     }
 
-    toast({ title: "Application submitted", description: "Admin panel me record add ho gaya hai." });
-
-    setFullName("");
-    setEmail("");
-    setPhone("");
-    setCourse("Full-Stack Web Development");
-    setStartDate("");
-    setMessage("");
+    setVoucher({ id: `VCH-${Date.now()}`, amount, course });
+    toast({ title: "Fee voucher generated", description: `Amount ₨ ${amount.toLocaleString()}` });
   };
+
+  async function markPaid() {
+    if (!voucher) return;
+    const studentId = `STU-${Date.now()}`;
+    const record = {
+      id: studentId,
+      record: {
+        id: studentId,
+        name: fullName,
+        email,
+        phone,
+        status: "Current",
+        admission: {
+          course,
+          batch: "UNASSIGNED",
+          campus: "Main",
+          date: new Date().toISOString(),
+        },
+        fee: {
+          total: voucher.amount,
+          installments: [
+            {
+              id: "V1",
+              amount: voucher.amount,
+              dueDate: new Date().toISOString(),
+              paidAt: new Date().toISOString(),
+            },
+          ],
+        },
+        attendance: [],
+        documents: [],
+        communications: [],
+      },
+    } as any;
+    try {
+      await supabase.from("students").upsert(record, { onConflict: "id" });
+      toast({ title: "Fee received", description: "Student added to directory." });
+      navigate("/dashboard/students");
+    } catch (e: any) {
+      toast({ title: "Save failed", description: String(e?.message || e) });
+    }
+  }
 
   return (
     <div className="mx-auto w-full max-w-xl">
       <h2 className="text-2xl font-bold">Admission Form</h2>
-      <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-        <div>
-          <Label htmlFor="fullName">Student Name</Label>
-          <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+      {!voucher ? (
+        <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+          <div>
+            <Label htmlFor="fullName">Student Name</Label>
+            <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+          </div>
+          <div>
+            <Label htmlFor="email">Email</Label>
+            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+          </div>
+          <div>
+            <Label htmlFor="phone">Phone</Label>
+            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+          </div>
+          <div>
+            <Label htmlFor="course">Select Course</Label>
+            <select id="course" className="w-full rounded-md border px-3 py-2" value={course} onChange={(e) => setCourse(e.target.value)}>
+              {COURSES.map((c) => (
+                <option key={c.id} value={c.name}>
+                  {c.name} — ₨ {c.fees.toLocaleString()}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label htmlFor="start">Starting Date Preference</Label>
+            <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="message">Message (optional)</Label>
+            <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
+          </div>
+          <Button type="submit" disabled={submitting}>{submitting ? "Submitting…" : "Generate Fee Voucher"}</Button>
+        </form>
+      ) : (
+        <div className="mt-6 space-y-4 rounded-md border p-4">
+          <div className="text-lg font-semibold">Fee Voucher</div>
+          <div className="text-sm text-muted-foreground">Voucher #: {voucher.id}</div>
+          <div className="text-sm">Student: {fullName}</div>
+          <div className="text-sm">Course: {voucher.course}</div>
+          <div className="text-sm">Amount: ₨ {voucher.amount.toLocaleString()}</div>
+          <div className="flex gap-2 pt-2">
+            <Button onClick={markPaid}>Mark Fee as Paid</Button>
+            <Button variant="outline" onClick={() => setVoucher(null)}>Edit Details</Button>
+          </div>
         </div>
-        <div>
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
-        </div>
-        <div>
-          <Label htmlFor="phone">Phone</Label>
-          <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
-        </div>
-        <div>
-          <Label htmlFor="course">Select Course</Label>
-          <Input id="course" value={course} onChange={(e) => setCourse(e.target.value)} required />
-        </div>
-        <div>
-          <Label htmlFor="start">Starting Date Preference</Label>
-          <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-        </div>
-        <div>
-          <Label htmlFor="message">Message (optional)</Label>
-          <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
-        </div>
-        <Button type="submit" disabled={submitting}>{submitting ? "Submitting…" : "Submit"}</Button>
-      </form>
+      )}
     </div>
   );
 }
