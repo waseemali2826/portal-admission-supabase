@@ -174,7 +174,7 @@ export default function Contact() {
                 className="h-full w-full"
                 loading="eager"
                 referrerPolicy="no-referrer-when-downgrade"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=66.99%2C24.84%2C67.13%2C24.92&amp;layer=mapnik"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=73.1075%2C31.4102%2C73.1275%2C31.4302&layer=mapnik&marker=31.4202%2C73.1175"
               ></iframe>
             </div>
           </CardContent>
