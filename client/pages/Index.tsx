@@ -139,7 +139,7 @@ export default function Index() {
       if (Array.isArray(list) && list.length) return list;
     } catch {}
     return studentsMock as any[];
-  }, []);
+  }, [studentsVersion]);
 
   const totalIncome = useMemo(() => {
     let sum = 0;
