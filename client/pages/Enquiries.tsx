@@ -319,7 +319,7 @@ function CreateEnquiry() {
               next_follow: fd.get("follow")
                 ? new Date(String(fd.get("follow"))).toISOString()
                 : null,
-              probability: Array.isArray((null as any)) ? 0 : 0,
+              probability: 0,
               sources: [],
               source: undefined as string | undefined,
               remarks: String(fd.get("remarks") || "").trim() || null,
@@ -328,7 +328,6 @@ function CreateEnquiry() {
             } as any;
 
             // use current slider + selected checkboxes state
-            payload.probability = (Array.isArray([]) ? 0 : 0) + 0; // placeholder calc removed below
             // real values from component state
             payload.probability = probability[0] ?? 50;
             payload.sources = sources;
