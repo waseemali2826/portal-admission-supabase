@@ -260,7 +260,6 @@ export default function Index() {
             title="Students"
             subtitle="Directory"
             icon={<Users2 className="h-5 w-5" />}
-            stat={`${totalStudents}`}
           />
           <FeatureCard
             to="/dashboard/enquiries"
