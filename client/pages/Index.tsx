@@ -160,12 +160,14 @@ export default function Index() {
 
   const enrollByCourse = useMemo(() => {
     const counts = new Map<string, number>();
+    for (const c of liveCourses) counts.set(c.name, 0);
     for (const s of students as any[]) {
-      const c = s?.admission?.course || "Unknown";
+      const c = s?.admission?.course;
+      if (!c) continue;
       counts.set(c, (counts.get(c) || 0) + 1);
     }
     return Array.from(counts.entries()).map(([course, count]) => ({ course, count }));
-  }, [students]);
+  }, [students, liveCourses]);
 
   useEffect(() => {
     (async () => {
