@@ -113,8 +113,20 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useMemo, useState } from "react";
 import { paymentStatus } from "./types";
 import type { AdmissionRecord, AdmissionStatus } from "./types";
@@ -133,13 +145,14 @@ export function ApplicationsTab({
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    let rows = data.filter((r) =>
-      !q ||
-      r.student.name.toLowerCase().includes(q) ||
-      r.student.email.toLowerCase().includes(q) ||
-      r.course.toLowerCase().includes(q) ||
-      r.batch.toLowerCase().includes(q) ||
-      r.campus.toLowerCase().includes(q),
+    let rows = data.filter(
+      (r) =>
+        !q ||
+        r.student.name.toLowerCase().includes(q) ||
+        r.student.email.toLowerCase().includes(q) ||
+        r.course.toLowerCase().includes(q) ||
+        r.batch.toLowerCase().includes(q) ||
+        r.campus.toLowerCase().includes(q),
     );
     const isPaid = (r: AdmissionRecord) => paymentStatus(r) === "Paid";
     rows = rows.filter((r) => (filter === "paid" ? isPaid(r) : !isPaid(r)));
@@ -153,13 +166,30 @@ export function ApplicationsTab({
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-sm font-medium">Admission Applications</div>
         <div className="ml-auto flex items-center gap-2">
-          <Input className="max-w-xs" placeholder="Search name, course, campus…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Input
+            className="max-w-xs"
+            placeholder="Search name, course, campus…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="flex gap-2">
-        <Button variant={filter === "unpaid" ? "default" : "outline"} size="sm" onClick={() => setFilter("unpaid")}>Unpaid</Button>
-        <Button variant={filter === "paid" ? "default" : "outline"} size="sm" onClick={() => setFilter("paid")}>Paid</Button>
+        <Button
+          variant={filter === "unpaid" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("unpaid")}
+        >
+          Unpaid
+        </Button>
+        <Button
+          variant={filter === "paid" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("paid")}
+        >
+          Paid
+        </Button>
       </div>
 
       <Table>
@@ -179,7 +209,9 @@ export function ApplicationsTab({
               <TableCell>{r.id}</TableCell>
               <TableCell>
                 <div className="font-medium">{r.student.name}</div>
-                <div className="text-xs text-muted-foreground">{r.student.email}</div>
+                <div className="text-xs text-muted-foreground">
+                  {r.student.email}
+                </div>
               </TableCell>
               <TableCell>
                 <div>{r.course}</div>
@@ -187,12 +219,18 @@ export function ApplicationsTab({
               </TableCell>
               <TableCell>{r.campus}</TableCell>
               <TableCell>
-                <Badge variant={paymentStatus(r) === "Paid" ? "default" : "secondary"}>
+                <Badge
+                  variant={
+                    paymentStatus(r) === "Paid" ? "default" : "secondary"
+                  }
+                >
                   {paymentStatus(r) === "Paid" ? "Paid" : "Unpaid"}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                <Button size="sm" onClick={() => setOpenId(r.id)}>Review</Button>
+                <Button size="sm" onClick={() => setOpenId(r.id)}>
+                  Review
+                </Button>
               </TableCell>
             </TableRow>
           ))}

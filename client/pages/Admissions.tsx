@@ -155,14 +155,14 @@ export default function Admissions() {
       const byAppId = await supabase
         .from("applications")
         .update(payload)
-        .eq("app_id", Number.isFinite(idNum) ? idNum : next.id as any);
+        .eq("app_id", Number.isFinite(idNum) ? idNum : (next.id as any));
       if (!byAppId.error) return;
     } catch {}
     try {
       await supabase
         .from("applications")
         .update(payload)
-        .eq("id", Number.isFinite(idNum) ? idNum : next.id as any);
+        .eq("id", Number.isFinite(idNum) ? idNum : (next.id as any));
     } catch (e) {
       console.error("Failed to persist application update", e);
     }

@@ -216,7 +216,6 @@
 //   );
 // }
 
-
 import { useState, FormEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -243,7 +242,8 @@ export default function AdmissionForm() {
     course: string;
   }>(null);
 
-  const courseFee = (name: string) => COURSES.find((c) => c.name === name)?.fees || 0;
+  const courseFee = (name: string) =>
+    COURSES.find((c) => c.name === name)?.fees || 0;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -262,7 +262,9 @@ export default function AdmissionForm() {
         batch: "TBD",
         campus: "Main",
         fee_total: amount,
-        fee_installments: [{ id: "V1", amount, dueDate: new Date().toISOString() }],
+        fee_installments: [
+          { id: "V1", amount, dueDate: new Date().toISOString() },
+        ],
         documents: [],
       },
     ]);
@@ -275,7 +277,10 @@ export default function AdmissionForm() {
     }
 
     setVoucher({ id: `VCH-${Date.now()}`, amount, course });
-    toast({ title: "Fee voucher generated", description: `Amount ₨ ${amount.toLocaleString()}` });
+    toast({
+      title: "Fee voucher generated",
+      description: `Amount ₨ ${amount.toLocaleString()}`,
+    });
   };
 
   async function markPaid() {
@@ -322,11 +327,17 @@ export default function AdmissionForm() {
         upsertStudent(record.record);
       } catch {}
     }
-    toast({ title: "Fee received", description: "Student added to directory." });
+    toast({
+      title: "Fee received",
+      description: "Student added to directory.",
+    });
     navigate("/dashboard/students");
   }
 
-  function printVoucher(v: { id: string; amount: number; course: string }, name: string) {
+  function printVoucher(
+    v: { id: string; amount: number; course: string },
+    name: string,
+  ) {
     const w = window.open("", "_blank");
     if (!w) return;
     const html = `<!doctype html><html><head><meta charset='utf-8'><title>Voucher ${v.id}</title>
@@ -349,19 +360,40 @@ export default function AdmissionForm() {
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div>
             <Label htmlFor="fullName">Student Name</Label>
-            <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            <Input
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
           </div>
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
           <div>
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
           </div>
           <div>
             <Label htmlFor="course">Select Course</Label>
-            <select id="course" className="w-full rounded-md border px-3 py-2" value={course} onChange={(e) => setCourse(e.target.value)}>
+            <select
+              id="course"
+              className="w-full rounded-md border px-3 py-2"
+              value={course}
+              onChange={(e) => setCourse(e.target.value)}
+            >
               {COURSES.map((c) => (
                 <option key={c.id} value={c.name}>
                   {c.name} — ₨ {c.fees.toLocaleString()}
@@ -371,25 +403,47 @@ export default function AdmissionForm() {
           </div>
           <div>
             <Label htmlFor="start">Starting Date Preference</Label>
-            <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input
+              id="start"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
           <div>
             <Label htmlFor="message">Message (optional)</Label>
-            <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
+            <Textarea
+              id="message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
           </div>
-          <Button type="submit" disabled={submitting}>{submitting ? "Submitting…" : "Generate Fee Voucher"}</Button>
+          <Button type="submit" disabled={submitting}>
+            {submitting ? "Submitting…" : "Generate Fee Voucher"}
+          </Button>
         </form>
       ) : (
         <div className="mt-6 space-y-4 rounded-md border p-4">
           <div className="text-lg font-semibold">Fee Voucher</div>
-          <div className="text-sm text-muted-foreground">Voucher #: {voucher.id}</div>
+          <div className="text-sm text-muted-foreground">
+            Voucher #: {voucher.id}
+          </div>
           <div className="text-sm">Student: {fullName}</div>
           <div className="text-sm">Course: {voucher.course}</div>
-          <div className="text-sm">Amount: ₨ {voucher.amount.toLocaleString()}</div>
+          <div className="text-sm">
+            Amount: ₨ {voucher.amount.toLocaleString()}
+          </div>
           <div className="flex gap-2 pt-2">
             <Button onClick={markPaid}>Mark Fee as Paid</Button>
-            <Button variant="outline" onClick={() => setVoucher(null)}>Edit Details</Button>
-            <Button variant="outline" onClick={() => printVoucher(voucher, fullName)}>Print Voucher</Button>
+            <Button variant="outline" onClick={() => setVoucher(null)}>
+              Edit Details
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => printVoucher(voucher, fullName)}
+            >
+              Print Voucher
+            </Button>
           </div>
         </div>
       )}

@@ -68,7 +68,10 @@ export function Details({
     };
     upsertStudent(student);
     navigate("/dashboard/fees#student");
-    toast({ title: "Admission confirmed", description: `Student added: ${student.name}` });
+    toast({
+      title: "Admission confirmed",
+      description: `Student added: ${student.name}`,
+    });
   };
 
   const reject = () => {
@@ -271,7 +274,9 @@ export function Details({
       <Separator />
 
       <div className="flex flex-wrap gap-2">
-        <Button variant="outline" onClick={printForm}>Print Admission Form</Button>
+        <Button variant="outline" onClick={printForm}>
+          Print Admission Form
+        </Button>
       </div>
     </div>
   );
