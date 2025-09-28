@@ -1,46 +1,67 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
 import type { StudentRecord } from "./students/types";
-import { studentsMock } from "./students/data";
 import { Directory } from "./students/Directory";
 import { AttendanceTab } from "./students/Attendance";
 import { StatusTab } from "./students/Status";
 import { StudentsReports } from "./students/Reports";
-import { getStudents, upsertStudent } from "@/lib/studentStore";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Students() {
-  const [items, setItems] = useState<StudentRecord[]>(() => {
-    const stored = getStudents();
-    const map = new Map<string, StudentRecord>();
-    for (const s of studentsMock) map.set(s.id, s);
-    for (const s of stored) map.set(s.id, s); // stored overrides
-    return Array.from(map.values());
-  });
+  const [items, setItems] = useState<StudentRecord[]>([]);
 
-  const upsert = (next: StudentRecord) => {
-    upsertStudent(next);
+  const upsert = async (next: StudentRecord) => {
     setItems((prev) => {
       const map = new Map<string, StudentRecord>();
       for (const s of prev) map.set(s.id, s);
       map.set(next.id, next);
       return Array.from(map.values());
     });
+    try {
+      await supabase
+        .from("students")
+        .upsert({ id: next.id, record: next }, { onConflict: "id" });
+    } catch {}
   };
 
   useEffect(() => {
-    const refresh = () => {
-      const stored = getStudents();
-      const map = new Map<string, StudentRecord>();
-      for (const s of studentsMock) map.set(s.id, s);
-      for (const s of stored) map.set(s.id, s);
-      setItems(Array.from(map.values()));
-    };
-    window.addEventListener("students:changed", refresh as EventListener);
-    window.addEventListener("storage", refresh as EventListener);
-    return () => {
-      window.removeEventListener("students:changed", refresh as EventListener);
-      window.removeEventListener("storage", refresh as EventListener);
-    };
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("students")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          const list: StudentRecord[] = data.map((r: any) =>
+            r.record
+              ? r.record
+              : {
+                  id: r.id,
+                  name: r.name,
+                  email: r.email,
+                  phone: r.phone,
+                  status: r.status || "Current",
+                  admission: {
+                    course: r.course || "",
+                    batch: r.batch || "",
+                    campus: r.campus || "",
+                    date: r.date || new Date().toISOString(),
+                  },
+                  fee: {
+                    total: r.fee_total || 0,
+                    installments: r.fee_installments || [],
+                  },
+                  attendance: r.attendance || [],
+                  documents: r.documents || [],
+                  communications: r.communications || [],
+                  enrolledCourses: r.enrolled_courses || [],
+                  notes: r.notes || undefined,
+                },
+          );
+          setItems(list);
+        }
+      } catch {}
+    })();
   }, []);
 
   return (

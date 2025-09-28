@@ -57,8 +57,12 @@
 //   return `${base}-${n}`;
 // }
 
-
-export type AdmissionStatus = "Pending" | "Verified" | "Rejected" | "Cancelled" | "Suspended";
+export type AdmissionStatus =
+  | "Pending"
+  | "Verified"
+  | "Rejected"
+  | "Cancelled"
+  | "Suspended";
 
 export interface Installment {
   id: string;
@@ -104,7 +108,7 @@ export function paymentStatus(rec: AdmissionRecord): PaymentStatus {
   if (allPaid) return "Paid";
   const now = Date.now();
   const anyOverdue = rec.fee.installments.some(
-    (i) => !i.paidAt && new Date(i.dueDate).getTime() < now
+    (i) => !i.paidAt && new Date(i.dueDate).getTime() < now,
   );
   return anyOverdue ? "Overdue" : "Pending";
 }
