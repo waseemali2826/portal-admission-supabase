@@ -66,7 +66,12 @@ export default function CourseCatalog() {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) console.error(error);
-    else setCourses(data);
+    else {
+      setCourses(data);
+      try {
+        window.dispatchEvent(new CustomEvent("courses:changed", { detail: { type: "fetch" } }));
+      } catch {}
+    }
   };
 
   useEffect(() => {
