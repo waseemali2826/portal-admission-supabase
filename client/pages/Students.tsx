@@ -65,7 +65,12 @@ export default function Students() {
                 },
           );
           setItems(list);
+          return;
         }
+      } catch {}
+      try {
+        const { getStudents } = await import("@/lib/studentStore");
+        setItems(getStudents());
       } catch {}
     })();
   }, []);
