@@ -59,6 +59,7 @@ export default function Index() {
   const [enquiriesCount, setEnquiriesCount] = useState(0);
   const [applicationsPendingCount, setApplicationsPendingCount] = useState(0);
   const [courses, setCourses] = useState<Array<{ name: string; fees: number }>>([]);
+  const [studentsOnline, setStudentsOnline] = useState<any[]>([]);
 
   // react to local course changes and storage
   useEffect(() => {
@@ -130,16 +131,47 @@ export default function Index() {
     } catch {}
   }, [coursesVersion]);
 
+  // fetch students from Supabase (records saved by AdmissionForm), realtime updates
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase.from("students").select("record").order("id", { ascending: false });
+        if (!error && Array.isArray(data)) setStudentsOnline(data.map((x: any) => x.record).filter(Boolean));
+      } catch {}
+    })();
+
+    try {
+      const ch = (supabase as any)?.channel?.("students-dash");
+      if (ch && ch.on && ch.subscribe) {
+        ch.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "students" },
+          () => {
+            supabase
+              .from("students")
+              .select("record")
+              .order("id", { ascending: false })
+              .then(({ data }) => data && setStudentsOnline(data.map((x: any) => x.record).filter(Boolean)));
+          },
+        ).subscribe();
+        return () => {
+          try { ch.unsubscribe(); } catch {}
+        };
+      }
+    } catch {}
+  }, []);
+
   const liveCourses = useMemo(() => courses, [courses]);
 
-  // Students & income stats
+  // Students & income stats (prefer live DB, fallback to local/mock)
   const students = useMemo(() => {
+    if (studentsOnline.length) return studentsOnline as any[];
     try {
       const list = getStudents();
       if (Array.isArray(list) && list.length) return list;
     } catch {}
     return studentsMock as any[];
-  }, [studentsVersion]);
+  }, [studentsVersion, studentsOnline]);
 
   const totalIncome = useMemo(() => {
     let sum = 0;
