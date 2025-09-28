@@ -271,26 +271,7 @@ export function Details({
       <Separator />
 
       <div className="flex flex-wrap gap-2">
-        <Button onClick={approve}>Approve & Generate ID</Button>
-        <Button onClick={confirmAdmission}>Confirm Admission</Button>
-        <Button variant="destructive" onClick={reject}>
-          Reject
-        </Button>
-        <Button variant="outline" onClick={suspend}>
-          Freeze / Suspend
-        </Button>
-        <Button variant="outline" onClick={cancel}>
-          Cancel
-        </Button>
-        <Button variant="outline" onClick={printForm}>
-          Print Admission Form
-        </Button>
-        <Button variant="outline" onClick={() => notify("sms")}>
-          Notify via SMS
-        </Button>
-        <Button variant="outline" onClick={() => notify("email")}>
-          Notify via Email
-        </Button>
+        <Button variant="outline" onClick={printForm}>Print Admission Form</Button>
       </div>
     </div>
   );
