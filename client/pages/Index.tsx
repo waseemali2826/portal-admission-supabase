@@ -90,16 +90,10 @@ export default function Index() {
   // Students & income stats
   const students = useMemo(() => {
     try {
-      const { getStudents } = require("@/lib/studentStore");
       const list = getStudents();
       if (Array.isArray(list) && list.length) return list;
     } catch {}
-    try {
-      const { studentsMock } = require("./students/data");
-      return studentsMock;
-    } catch {
-      return [] as any[];
-    }
+    return studentsMock as any[];
   }, []);
 
   const totalIncome = useMemo(() => {
