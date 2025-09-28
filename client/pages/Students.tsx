@@ -18,10 +18,16 @@ export default function Students() {
       return Array.from(map.values());
     });
     try {
-      await supabase
+      const { error } = await supabase
         .from("students")
         .upsert({ id: next.id, record: next }, { onConflict: "id" });
-    } catch {}
+      if (error) throw error;
+    } catch {
+      try {
+        const { upsertStudent } = await import("@/lib/studentStore");
+        upsertStudent(next);
+      } catch {}
+    }
   };
 
   useEffect(() => {
