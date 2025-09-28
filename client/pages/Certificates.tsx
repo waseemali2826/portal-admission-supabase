@@ -1,38 +1,92 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { CertificateRequest, CertificateStatus } from "./certificates/types";
-import { mockRequests } from "./certificates/data";
 import { RequestsTab } from "./certificates/Requests";
 import { ApprovalsTab } from "./certificates/Approvals";
 import { ProcessingTab } from "./certificates/Processing";
 import { TypesTab } from "./certificates/TypesTab";
 import { ReportsTab } from "./certificates/Reports";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Certificates() {
-  const [items, setItems] = useState<CertificateRequest[]>(mockRequests);
+  const [items, setItems] = useState<CertificateRequest[]>([]);
 
-  const upsert = (next: CertificateRequest | ((prev: CertificateRequest[]) => CertificateRequest[])) => {
+  const upsert = async (next: CertificateRequest | ((prev: CertificateRequest[]) => CertificateRequest[])) => {
     if (typeof next === "function") {
       setItems(next as any);
-    } else {
-      setItems((prev) => [next, ...prev]);
+      return;
     }
+    setItems((prev) => [next, ...prev]);
+    try {
+      await supabase.from("certificates").upsert({
+        id: next.id,
+        student_id: next.studentId,
+        student_name: next.studentName,
+        course: next.course,
+        batch: next.batch,
+        campus: next.campus,
+        type: next.type,
+        status: next.status,
+        requested_at: next.requestedAt,
+        approved_by: next.approvedBy || null,
+        rejected_reason: next.rejectedReason || null,
+        courier_tracking_id: next.courierTrackingId || null,
+      }, { onConflict: "id" });
+    } catch {}
   };
 
-  const approve = (id: string, approver: string) =>
+  const approve = async (id: string, approver: string) => {
     setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Approved", approvedBy: approver } : r)));
+    await supabase.from("certificates").update({ status: "Approved", approved_by: approver }).eq("id", id);
+  };
 
-  const reject = (id: string, reason: string) =>
+  const reject = async (id: string, reason: string) => {
     setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Rejected", rejectedReason: reason } : r)));
+    await supabase.from("certificates").update({ status: "Rejected", rejected_reason: reason }).eq("id", id);
+  };
 
-  const updateStatus = (id: string, status: CertificateStatus) =>
+  const updateStatus = async (id: string, status: CertificateStatus) => {
     setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status } : r)));
+    await supabase.from("certificates").update({ status }).eq("id", id);
+  };
 
-  const setTracking = (id: string, trackingId: string) =>
+  const setTracking = async (id: string, trackingId: string) => {
     setItems((prev) => prev.map((r) => (r.id === id ? { ...r, courierTrackingId: trackingId } : r)));
+    await supabase.from("certificates").update({ courier_tracking_id: trackingId }).eq("id", id);
+  };
 
-  const reprint = (id: string) =>
+  const reprint = async (id: string) => {
     setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Reprinting" } : r)));
+    await supabase.from("certificates").update({ status: "Reprinting" }).eq("id", id);
+  };
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("certificates")
+          .select("*")
+          .order("requested_at", { ascending: false });
+        if (!error && data) {
+          const mapped: CertificateRequest[] = data.map((r: any) => ({
+            id: String(r.id),
+            studentId: String(r.student_id || ""),
+            studentName: r.student_name || "",
+            course: r.course || "",
+            batch: r.batch || "",
+            campus: r.campus || "",
+            type: r.type,
+            status: r.status,
+            requestedAt: r.requested_at || new Date().toISOString(),
+            approvedBy: r.approved_by || undefined,
+            rejectedReason: r.rejected_reason || undefined,
+            courierTrackingId: r.courier_tracking_id || undefined,
+          }));
+          setItems(mapped);
+        }
+      } catch {}
+    })();
+  }, []);
 
   return (
     <div className="space-y-4">
