@@ -49,7 +49,6 @@ import {
   XCircle,
   UserPlus,
 } from "lucide-react";
-import { getPublicEnquiries } from "@/lib/publicStore";
 import { supabase } from "@/lib/supabaseClient";
 import { getAllCourseNames } from "@/lib/courseStore";
 
@@ -85,54 +84,7 @@ type Enquiry = {
   status: "Pending" | "Enrolled" | "Not Interested";
 };
 
-const BASE_ENQUIRIES: Enquiry[] = [
-  {
-    id: "ENQ-1001",
-    name: "Ahsan Khan",
-    course: "Full-Stack Web Dev",
-    contact: "0300-1234567",
-    email: "ahsan@example.com",
-    city: "Lahore",
-    source: "Walk-In",
-    nextFollow: "2025-02-20T11:00",
-    stage: "Prospective",
-    status: "Pending",
-  },
-  {
-    id: "ENQ-1002",
-    name: "Sara Ahmed",
-    course: "UI/UX Design",
-    contact: "0301-7654321",
-    city: "Lahore",
-    source: "Calls",
-    nextFollow: "2025-02-19T15:30",
-    stage: "Proposal",
-    status: "Pending",
-  },
-  {
-    id: "ENQ-1003",
-    name: "Bilal Iqbal",
-    course: "Data Science",
-    contact: "0321-9988776",
-    city: "Islamabad",
-    source: "Social Media",
-    nextFollow: "2025-02-18T12:00",
-    stage: "Negotiation",
-    status: "Pending",
-  },
-  {
-    id: "ENQ-1004",
-    name: "Ayesha Noor",
-    course: "Digital Marketing",
-    contact: "0333-1112223",
-    email: "ayesha@example.com",
-    city: "Faisalabad",
-    source: "Website",
-    nextFollow: "2025-02-18T10:00",
-    stage: "Need Analysis",
-    status: "Pending",
-  },
-];
+const BASE_ENQUIRIES: Enquiry[] = [];
 
 const VIEWS = [
   "Create New Enquiry",
@@ -167,19 +119,6 @@ export default function Enquiries() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const local = getPublicEnquiries();
-    const norm = (p: any): Enquiry => ({
-      id: p.id,
-      name: p.name,
-      course: p.course,
-      contact: p.contact,
-      email: p.email,
-      city: "Lahore",
-      source: "Website",
-      nextFollow: p.preferredStart,
-      stage: "Prospective",
-      status: "Pending",
-    });
     const fromSupabase = serverPub.map((p: any): Enquiry => ({
       id: String(p.id ?? p.enquiry_id ?? p.created_at ?? crypto.randomUUID?.() ?? Date.now()),
       name: p.name,
@@ -193,11 +132,7 @@ export default function Enquiries() {
       status: p.status ?? "Pending",
     }));
 
-    const merged: Enquiry[] = [
-      ...fromSupabase,
-      ...local.map(norm),
-      ...BASE_ENQUIRIES,
-    ];
+    const merged: Enquiry[] = fromSupabase;
     return merged.filter(
       (e) =>
         (stageFilter === "All" || e.stage === stageFilter) &&
@@ -241,7 +176,7 @@ export default function Enquiries() {
             </DropdownMenuContent>
           </DropdownMenu>
           <Input
-            placeholder="Search enquiries or ID����"
+            placeholder="Search enquiries or ID���"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 w-56"
@@ -532,15 +467,6 @@ function ImportBulk() {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [rows, setRows] = useState<string[][]>([
     ["Full Name", "Course Interested", "Contact", "Email", "City", "Source"],
-    [
-      "Ali Raza",
-      "Full-Stack Web Dev",
-      "0300-1112223",
-      "ali@example.com",
-      "Lahore",
-      "Walk-In",
-    ],
-    ["Hira Khan", "UI/UX Design", "0301-3334445", "", "Lahore", "Calls"],
   ]);
 
   const parseCSV = async (file: File) => {
@@ -639,7 +565,6 @@ function FollowUp({
           title="Pipeline (Pending)"
           value={`${enquiries.filter((e) => e.status === "Pending").length}`}
         />
-        <Stat title="Conversion (dummy)" value={`32%`} />
       </div>
       <Tabs value={tab} onValueChange={setTab}>
         <TabsList className="flex flex-wrap">
