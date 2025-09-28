@@ -5,6 +5,9 @@ import { preconnect } from "./preconnect";
 export const preloadContact = () => {
   preconnect("https://www.openstreetmap.org");
   preconnect("https://tile.openstreetmap.org");
+  preconnect("https://a.tile.openstreetmap.org");
+  preconnect("https://b.tile.openstreetmap.org");
+  preconnect("https://c.tile.openstreetmap.org");
   return import("../pages/Contact");
 };
 
