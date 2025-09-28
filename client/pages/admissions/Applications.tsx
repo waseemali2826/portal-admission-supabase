@@ -158,15 +158,8 @@ export function ApplicationsTab({
       </div>
 
       <div className="flex gap-2">
-        <Button variant={filter === "pending" ? "default" : "outline"} size="sm" onClick={() => setFilter("pending")}>
-          New Pending
-        </Button>
-        <Button variant={filter === "verified" ? "default" : "outline"} size="sm" onClick={() => setFilter("verified")}>
-          Verified
-        </Button>
-        <Button variant={filter === "blocked" ? "default" : "outline"} size="sm" onClick={() => setFilter("blocked")}>
-          Cancelled/Suspended
-        </Button>
+        <Button variant={filter === "unpaid" ? "default" : "outline"} size="sm" onClick={() => setFilter("unpaid")}>Unpaid</Button>
+        <Button variant={filter === "paid" ? "default" : "outline"} size="sm" onClick={() => setFilter("paid")}>Paid</Button>
       </div>
 
       <Table>
