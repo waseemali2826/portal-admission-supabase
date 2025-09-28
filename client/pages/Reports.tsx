@@ -8,49 +8,12 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { Line, LineChart, Bar, BarChart, XAxis, YAxis } from "recharts";
 import { ArrowUpRight, Download, MessageSquare, Mail, Phone, Users2, CalendarDays } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
-// Dummy datasets
-const recoverySeries = [
-  { label: "Mon", collected: 32000, pending: 8000 },
-  { label: "Tue", collected: 28000, pending: 12000 },
-  { label: "Wed", collected: 35000, pending: 7000 },
-  { label: "Thu", collected: 39000, pending: 6000 },
-  { label: "Fri", collected: 42000, pending: 5000 },
-  { label: "Sat", collected: 30000, pending: 15000 },
-  { label: "Sun", collected: 0, pending: 0 },
-];
-
-const communicationsSeries = [
-  { label: "Mon", sms: 240, email: 180, cost: 320 },
-  { label: "Tue", sms: 300, email: 210, cost: 380 },
-  { label: "Wed", sms: 180, email: 240, cost: 290 },
-  { label: "Thu", sms: 360, email: 220, cost: 430 },
-  { label: "Fri", sms: 420, email: 250, cost: 490 },
-  { label: "Sat", sms: 140, email: 120, cost: 170 },
-  { label: "Sun", sms: 0, email: 0, cost: 0 },
-];
-
-const userWise = [
-  { user: "Front Desk", sms: 420, email: 220 },
-  { user: "Telesales", sms: 680, email: 410 },
-  { user: "Manager", sms: 120, email: 260 },
-];
-
-const enquiryBySource = [
-  { source: "Walk-In", count: 42 },
-  { source: "Calls", count: 58 },
-  { source: "Social Media", count: 34 },
-  { source: "Live Chat", count: 18 },
-  { source: "Website", count: 26 },
-];
-
-const closingSummary = [
-  { period: "Daily Closing", total: 112000 },
-  { period: "Weekly Closing", total: 735000 },
-  { period: "Monthly Closing", total: 2960000 },
-  { period: "Quarterly Closing", total: 8740000 },
-  { period: "Yearly Closing", total: 35400000 },
-];
+const recoverySeries: Array<{ label: string; collected: number; pending: number }> = [];
+const communicationsSeries: Array<{ label: string; sms: number; email: number; cost: number }> = [];
+const userWise: Array<{ user: string; sms: number; email: number }> = [];
 
 const FREQUENCIES = ["Daily","Weekly","Monthly","Quarterly","Yearly","Date to Date"] as const;
 
@@ -59,6 +22,23 @@ export default function Reports() {
   const [freq, setFreq] = useState<typeof FREQUENCIES[number]>("Daily");
   const [from, setFrom] = useState("");
   const [to, setTo] = useState("");
+  const [enquiryBySource, setEnquiryBySource] = useState<Array<{ source: string; count: number }>>([]);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase.from("enquiries").select("source");
+        if (!error && data) {
+          const map = new Map<string, number>();
+          for (const row of data) {
+            const src = row.source || "Unknown";
+            map.set(src, (map.get(src) || 0) + 1);
+          }
+          setEnquiryBySource(Array.from(map.entries()).map(([source, count]) => ({ source, count })));
+        }
+      } catch {}
+    })();
+  }, []);
 
   const totals = useMemo(() => {
     const collected = recoverySeries.reduce((s, d) => s + d.collected, 0);
@@ -157,7 +137,7 @@ export default function Reports() {
             <StatsCard title="SMS Sent" value={`${communicationsSeries.reduce((s,d)=>s+d.sms,0)}`} subtitle={freq} icon={<MessageSquare className="h-5 w-5" />} />
             <StatsCard title="Emails Sent" value={`${communicationsSeries.reduce((s,d)=>s+d.email,0)}`} subtitle={freq} icon={<Mail className="h-5 w-5" />} />
             <StatsCard title="Total Cost" value={`₨ ${communicationsSeries.reduce((s,d)=>s+d.cost,0).toLocaleString()}`} subtitle="Approx." />
-            <StatsCard title="Top User" value={`${userWise.slice().sort((a,b)=> (b.sms+b.email)-(a.sms+a.email))[0].user}`} subtitle="By volume" />
+            <StatsCard title="Top User" value={`${userWise.slice().sort((a,b)=> (b.sms+b.email)-(a.sms+a.email))[0]?.user || "-"}`} subtitle="By volume" />
           </div>
           <Card>
             <CardHeader>
@@ -257,7 +237,7 @@ export default function Reports() {
 
         <TabsContent value="closings" className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            {closingSummary.map((c)=> (
+            {[].map((c: any)=> (
               <Card key={c.period}>
                 <CardHeader>
                   <CardTitle className="text-sm font-medium text-muted-foreground">{c.period}</CardTitle>
@@ -283,7 +263,7 @@ export default function Reports() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {closingSummary.map((c)=> (
+                    {[].map((c: any)=> (
                       <TableRow key={c.period}>
                         <TableCell className="font-medium">{c.period}</TableCell>
                         <TableCell className="text-right">₨ {c.total.toLocaleString()}</TableCell>
