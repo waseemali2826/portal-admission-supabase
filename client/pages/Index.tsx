@@ -58,7 +58,9 @@ export default function Index() {
   const [recentEnquiries, setRecentEnquiries] = useState<any[]>([]);
   const [enquiriesCount, setEnquiriesCount] = useState(0);
   const [applicationsPendingCount, setApplicationsPendingCount] = useState(0);
-  const [courses, setCourses] = useState<Array<{ name: string; fees: number }>>([]);
+  const [courses, setCourses] = useState<Array<{ name: string; fees: number }>>(
+    [],
+  );
   const [studentsOnline, setStudentsOnline] = useState<any[]>([]);
 
   // react to local course changes and storage
@@ -92,7 +94,9 @@ export default function Index() {
           .select("name,fees,status,created_at")
           .order("created_at", { ascending: false });
         if (!error && Array.isArray(data)) {
-          setCourses(data.map((c: any) => ({ name: c.name, fees: Number(c.fees) || 0 })));
+          setCourses(
+            data.map((c: any) => ({ name: c.name, fees: Number(c.fees) || 0 })),
+          );
         }
       } catch {}
       if (!courses.length) {
@@ -121,11 +125,22 @@ export default function Index() {
               .from("courses")
               .select("name,fees,status,created_at")
               .order("created_at", { ascending: false })
-              .then(({ data }) => data && setCourses(data.map((c: any) => ({ name: c.name, fees: Number(c.fees) || 0 }))));
+              .then(
+                ({ data }) =>
+                  data &&
+                  setCourses(
+                    data.map((c: any) => ({
+                      name: c.name,
+                      fees: Number(c.fees) || 0,
+                    })),
+                  ),
+              );
           },
         ).subscribe();
         return () => {
-          try { ch.unsubscribe(); } catch {}
+          try {
+            ch.unsubscribe();
+          } catch {}
         };
       }
     } catch {}
@@ -135,8 +150,12 @@ export default function Index() {
   useEffect(() => {
     (async () => {
       try {
-        const { data, error } = await supabase.from("students").select("record").order("id", { ascending: false });
-        if (!error && Array.isArray(data)) setStudentsOnline(data.map((x: any) => x.record).filter(Boolean));
+        const { data, error } = await supabase
+          .from("students")
+          .select("record")
+          .order("id", { ascending: false });
+        if (!error && Array.isArray(data))
+          setStudentsOnline(data.map((x: any) => x.record).filter(Boolean));
       } catch {}
     })();
 
@@ -151,11 +170,19 @@ export default function Index() {
               .from("students")
               .select("record")
               .order("id", { ascending: false })
-              .then(({ data }) => data && setStudentsOnline(data.map((x: any) => x.record).filter(Boolean)));
+              .then(
+                ({ data }) =>
+                  data &&
+                  setStudentsOnline(
+                    data.map((x: any) => x.record).filter(Boolean),
+                  ),
+              );
           },
         ).subscribe();
         return () => {
-          try { ch.unsubscribe(); } catch {}
+          try {
+            ch.unsubscribe();
+          } catch {}
         };
       }
     } catch {}
@@ -187,9 +214,14 @@ export default function Index() {
     const now = new Date();
     const months = [...Array(6)].map((_, i) => {
       const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return { key: `${d.getFullYear()}-${d.getMonth() + 1}`, label: d.toLocaleString(undefined, { month: "short" }) };
+      return {
+        key: `${d.getFullYear()}-${d.getMonth() + 1}`,
+        label: d.toLocaleString(undefined, { month: "short" }),
+      };
     });
-    const map = new Map(months.map((m) => [m.key, { month: m.label, income: 0 }]));
+    const map = new Map(
+      months.map((m) => [m.key, { month: m.label, income: 0 }]),
+    );
     for (const s of students as any[]) {
       for (const inst of s?.fee?.installments || []) {
         if (inst.paidAt) {
@@ -210,7 +242,10 @@ export default function Index() {
       if (!c) continue;
       counts.set(c, (counts.get(c) || 0) + 1);
     }
-    return Array.from(counts.entries()).map(([course, count]) => ({ course, count }));
+    return Array.from(counts.entries()).map(([course, count]) => ({
+      course,
+      count,
+    }));
   }, [students, liveCourses]);
 
   useEffect(() => {
@@ -282,7 +317,9 @@ export default function Index() {
           </CardHeader>
           <CardContent>
             <ChartContainer
-              config={{ income: { label: "Income", color: "hsl(var(--primary))" } }}
+              config={{
+                income: { label: "Income", color: "hsl(var(--primary))" },
+              }}
               className="h-[260px]"
             >
               <LineChart data={incomeSeries} margin={{ left: 8, right: 8 }}>
@@ -295,7 +332,10 @@ export default function Index() {
                   strokeWidth={2}
                   dot={false}
                 />
-                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent />}
+                />
               </LineChart>
             </ChartContainer>
           </CardContent>
@@ -306,14 +346,19 @@ export default function Index() {
           </CardHeader>
           <CardContent>
             <ChartContainer
-              config={{ count: { label: "Students", color: "hsl(var(--primary))" } }}
+              config={{
+                count: { label: "Students", color: "hsl(var(--primary))" },
+              }}
               className="h-[260px]"
             >
               <BarChart data={enrollByCourse} margin={{ left: 8, right: 8 }}>
                 <XAxis dataKey="course" tickLine={false} axisLine={false} />
                 <YAxis tickLine={false} axisLine={false} />
                 <Bar dataKey="count" fill="var(--color-count)" radius={4} />
-                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent />}
+                />
               </BarChart>
             </ChartContainer>
           </CardContent>

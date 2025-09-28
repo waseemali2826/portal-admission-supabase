@@ -89,7 +89,10 @@ export function PublicHeader() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64 sm:w-80">
-                <nav aria-label="Mobile" className="flex flex-col gap-1 p-4 text-sm">
+                <nav
+                  aria-label="Mobile"
+                  className="flex flex-col gap-1 p-4 text-sm"
+                >
                   <SheetClose asChild>
                     <NavLink
                       to="/"

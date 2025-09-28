@@ -38,8 +38,6 @@
 //   );
 // }
 
-
-
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
@@ -69,7 +67,9 @@ export default function CourseCatalog() {
     else {
       setCourses(data);
       try {
-        window.dispatchEvent(new CustomEvent("courses:changed", { detail: { type: "fetch" } }));
+        window.dispatchEvent(
+          new CustomEvent("courses:changed", { detail: { type: "fetch" } }),
+        );
       } catch {}
     }
   };
@@ -92,14 +92,20 @@ export default function CourseCatalog() {
             </CardHeader>
             <CardContent className="space-y-2">
               <div className="text-sm">
-                Duration: <span className="text-muted-foreground">{c.duration}</span>
+                Duration:{" "}
+                <span className="text-muted-foreground">{c.duration}</span>
               </div>
               <div className="text-sm">
-                Fees: <span className="text-muted-foreground">₨ {c.fees.toLocaleString()}</span>
+                Fees:{" "}
+                <span className="text-muted-foreground">
+                  ₨ {c.fees.toLocaleString()}
+                </span>
               </div>
               <p className="text-sm text-muted-foreground">{c.description}</p>
               <Button asChild className="mt-2 w-full">
-                <Link to={`/admission-form?course=${encodeURIComponent(c.name)}`}>
+                <Link
+                  to={`/admission-form?course=${encodeURIComponent(c.name)}`}
+                >
                   Apply Now
                 </Link>
               </Button>

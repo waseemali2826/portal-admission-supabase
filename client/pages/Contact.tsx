@@ -107,9 +107,6 @@
 //   );
 // }
 
-
-
-
 import { useState, FormEvent } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -130,13 +127,16 @@ export default function Contact() {
     e.preventDefault();
     setSending(true);
     try {
-      const { error } = await supabase.from("contacts").insert([
-        { name, email, message },
-      ]);
+      const { error } = await supabase
+        .from("contacts")
+        .insert([{ name, email, message }]);
 
       if (error) throw error;
 
-      toast({ title: "Message sent", description: "Thanks for contacting us." });
+      toast({
+        title: "Message sent",
+        description: "Thanks for contacting us.",
+      });
       setName("");
       setEmail("");
       setMessage("");
@@ -160,7 +160,8 @@ export default function Contact() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div>
-              <span className="font-medium">Address:</span> Skills Institute, Susan Road, Chenab Market, Faisalabad
+              <span className="font-medium">Address:</span> Skills Institute,
+              Susan Road, Chenab Market, Faisalabad
             </div>
             <div>
               <span className="font-medium">Phone:</span> +92 300 1234567

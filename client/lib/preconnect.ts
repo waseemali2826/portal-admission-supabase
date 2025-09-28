@@ -10,7 +10,9 @@ export function preconnect(href: string, crossOrigin: boolean = true) {
       if (crossOrigin) link.crossOrigin = "";
       head.appendChild(link);
     }
-    const existsDns = head.querySelector(`link[rel=dns-prefetch][href="${href}"]`);
+    const existsDns = head.querySelector(
+      `link[rel=dns-prefetch][href="${href}"]`,
+    );
     if (!existsDns) {
       const link2 = document.createElement("link");
       link2.rel = "dns-prefetch";
