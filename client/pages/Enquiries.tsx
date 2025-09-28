@@ -50,7 +50,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { getPublicEnquiries } from "@/lib/publicStore";
-import { listEnquiries } from "@/lib/publicApi";
+import { supabase } from "@/lib/supabaseClient";
 import { getAllCourseNames } from "@/lib/courseStore";
 
 const COUNTRIES = ["Pakistan", "India", "UAE"] as const;
@@ -154,9 +154,14 @@ export default function Enquiries() {
   useEffect(() => {
     (async () => {
       try {
-        const items = await listEnquiries();
-        setServerPub(items);
-      } catch {}
+        const { data, error } = await supabase
+          .from("enquiries")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (!error && data) setServerPub(data);
+      } catch {
+        // ignore
+      }
     })();
   }, []);
 
@@ -175,8 +180,21 @@ export default function Enquiries() {
       stage: "Prospective",
       status: "Pending",
     });
+    const fromSupabase = serverPub.map((p: any): Enquiry => ({
+      id: String(p.id ?? p.enquiry_id ?? p.created_at ?? crypto.randomUUID?.() ?? Date.now()),
+      name: p.name,
+      course: p.course,
+      contact: p.contact ?? p.phone,
+      email: p.email ?? undefined,
+      city: p.city ?? "Lahore",
+      source: p.source ?? (Array.isArray(p.sources) && p.sources[0]) || "Website",
+      nextFollow: p.next_follow ?? p.preferred_start ?? undefined,
+      stage: p.stage ?? "Prospective",
+      status: p.status ?? "Pending",
+    }));
+
     const merged: Enquiry[] = [
-      ...serverPub.map(norm),
+      ...fromSupabase,
       ...local.map(norm),
       ...BASE_ENQUIRIES,
     ];
@@ -284,15 +302,57 @@ function CreateEnquiry() {
       <CardContent>
         <form
           className="grid gap-4 md:grid-cols-2"
-          onSubmit={(e) => {
+          onSubmit={async (e) => {
             e.preventDefault();
             const form = e.currentTarget as HTMLFormElement;
-            const data = Object.fromEntries(new FormData(form).entries());
+            const fd = new FormData(form);
+            const payload = {
+              name: String(fd.get("name") || "").trim(),
+              course: String(fd.get("course") || "").trim(),
+              contact: String(fd.get("phone") || "").trim(),
+              email: String(fd.get("email") || "").trim() || null,
+              gender: String(fd.get("gender") || "").trim() || null,
+              country: String(fd.get("country") || "").trim() || null,
+              city: String(fd.get("city") || "").trim() || null,
+              area: String(fd.get("area") || "").trim() || null,
+              campus: String(fd.get("campus") || "").trim() || null,
+              next_follow: fd.get("follow")
+                ? new Date(String(fd.get("follow"))).toISOString()
+                : null,
+              probability: Array.isArray((null as any)) ? 0 : 0,
+              sources: [],
+              source: undefined as string | undefined,
+              remarks: String(fd.get("remarks") || "").trim() || null,
+              stage: "Prospective",
+              status: "Pending",
+            } as any;
+
+            // use current slider + selected checkboxes state
+            payload.probability = (Array.isArray([]) ? 0 : 0) + 0; // placeholder calc removed below
+            // real values from component state
+            payload.probability = probability[0] ?? 50;
+            payload.sources = sources;
+            payload.source = sources[0] || "Website";
+
+            const { data, error } = await supabase
+              .from("enquiries")
+              .insert([payload])
+              .select()
+              .single();
+
+            if (error) {
+              toast({ title: "Failed to save", description: error.message });
+              return;
+            }
+
             toast({
               title: "Enquiry created",
-              description: `${data.name} (${data.course}) saved.`,
+              description: `${payload.name} (${payload.course}) saved.`,
             });
             form.reset();
+            setSources([]);
+            setProbability([50]);
+            setServerPub((prev) => (data ? [data, ...prev] : prev));
           }}
         >
           <div className="space-y-1.5">
