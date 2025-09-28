@@ -367,6 +367,7 @@ export default function AdmissionForm() {
           <div className="flex gap-2 pt-2">
             <Button onClick={markPaid}>Mark Fee as Paid</Button>
             <Button variant="outline" onClick={() => setVoucher(null)}>Edit Details</Button>
+            <Button variant="outline" onClick={() => printVoucher(voucher, fullName)}>Print Voucher</Button>
           </div>
         </div>
       )}
