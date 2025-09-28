@@ -187,7 +187,7 @@ export default function Enquiries() {
       contact: p.contact ?? p.phone,
       email: p.email ?? undefined,
       city: p.city ?? "Lahore",
-      source: p.source ?? (Array.isArray(p.sources) && p.sources[0]) || "Website",
+      source: p.source ?? (Array.isArray(p.sources) ? p.sources[0] : "Website"),
       nextFollow: p.next_follow ?? p.preferred_start ?? undefined,
       stage: p.stage ?? "Prospective",
       status: p.status ?? "Pending",
@@ -241,7 +241,7 @@ export default function Enquiries() {
             </DropdownMenuContent>
           </DropdownMenu>
           <Input
-            placeholder="Search enquiries or ID���"
+            placeholder="Search enquiries or ID����"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="h-9 w-56"
