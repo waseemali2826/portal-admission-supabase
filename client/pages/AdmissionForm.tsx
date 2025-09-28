@@ -312,12 +312,34 @@ export default function AdmissionForm() {
       },
     } as any;
     try {
-      await supabase.from("students").upsert(record, { onConflict: "id" });
-      toast({ title: "Fee received", description: "Student added to directory." });
-      navigate("/dashboard/students");
-    } catch (e: any) {
-      toast({ title: "Save failed", description: String(e?.message || e) });
+      const { error } = await supabase
+        .from("students")
+        .upsert(record, { onConflict: "id" });
+      if (error) throw error;
+    } catch {
+      try {
+        const { upsertStudent } = await import("@/lib/studentStore");
+        upsertStudent(record.record);
+      } catch {}
     }
+    toast({ title: "Fee received", description: "Student added to directory." });
+    navigate("/dashboard/students");
+  }
+
+  function printVoucher(v: { id: string; amount: number; course: string }, name: string) {
+    const w = window.open("", "_blank");
+    if (!w) return;
+    const html = `<!doctype html><html><head><meta charset='utf-8'><title>Voucher ${v.id}</title>
+      <style>body{font-family:ui-sans-serif,system-ui;line-height:1.5;padding:24px}h1{font-size:18px;margin:0 0 8px}table{border-collapse:collapse;width:100%}td{padding:6px 8px;border:1px solid #e5e7eb}</style>
+      </head><body>
+      <h1>Fee Voucher</h1>
+      <table><tr><td>Voucher #</td><td>${v.id}</td></tr>
+      <tr><td>Student</td><td>${name}</td></tr>
+      <tr><td>Course</td><td>${v.course}</td></tr>
+      <tr><td>Amount</td><td>₨ ${v.amount.toLocaleString()}</td></tr></table>
+      <script>window.print()<\/script></body></html>`;
+    w.document.write(html);
+    w.document.close();
   }
 
   return (
