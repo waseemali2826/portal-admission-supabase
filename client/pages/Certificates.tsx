@@ -1,6 +1,9 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useEffect, useState } from "react";
-import type { CertificateRequest, CertificateStatus } from "./certificates/types";
+import type {
+  CertificateRequest,
+  CertificateStatus,
+} from "./certificates/types";
 import { RequestsTab } from "./certificates/Requests";
 import { ApprovalsTab } from "./certificates/Approvals";
 import { ProcessingTab } from "./certificates/Processing";
@@ -11,38 +14,59 @@ import { supabase } from "@/lib/supabaseClient";
 export default function Certificates() {
   const [items, setItems] = useState<CertificateRequest[]>([]);
 
-  const upsert = async (next: CertificateRequest | ((prev: CertificateRequest[]) => CertificateRequest[])) => {
+  const upsert = async (
+    next:
+      | CertificateRequest
+      | ((prev: CertificateRequest[]) => CertificateRequest[]),
+  ) => {
     if (typeof next === "function") {
       setItems(next as any);
       return;
     }
     setItems((prev) => [next, ...prev]);
     try {
-      await supabase.from("certificates").upsert({
-        id: next.id,
-        student_id: next.studentId,
-        student_name: next.studentName,
-        course: next.course,
-        batch: next.batch,
-        campus: next.campus,
-        type: next.type,
-        status: next.status,
-        requested_at: next.requestedAt,
-        approved_by: next.approvedBy || null,
-        rejected_reason: next.rejectedReason || null,
-        courier_tracking_id: next.courierTrackingId || null,
-      }, { onConflict: "id" });
+      await supabase.from("certificates").upsert(
+        {
+          id: next.id,
+          student_id: next.studentId,
+          student_name: next.studentName,
+          course: next.course,
+          batch: next.batch,
+          campus: next.campus,
+          type: next.type,
+          status: next.status,
+          requested_at: next.requestedAt,
+          approved_by: next.approvedBy || null,
+          rejected_reason: next.rejectedReason || null,
+          courier_tracking_id: next.courierTrackingId || null,
+        },
+        { onConflict: "id" },
+      );
     } catch {}
   };
 
   const approve = async (id: string, approver: string) => {
-    setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Approved", approvedBy: approver } : r)));
-    await supabase.from("certificates").update({ status: "Approved", approved_by: approver }).eq("id", id);
+    setItems((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, status: "Approved", approvedBy: approver } : r,
+      ),
+    );
+    await supabase
+      .from("certificates")
+      .update({ status: "Approved", approved_by: approver })
+      .eq("id", id);
   };
 
   const reject = async (id: string, reason: string) => {
-    setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Rejected", rejectedReason: reason } : r)));
-    await supabase.from("certificates").update({ status: "Rejected", rejected_reason: reason }).eq("id", id);
+    setItems((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, status: "Rejected", rejectedReason: reason } : r,
+      ),
+    );
+    await supabase
+      .from("certificates")
+      .update({ status: "Rejected", rejected_reason: reason })
+      .eq("id", id);
   };
 
   const updateStatus = async (id: string, status: CertificateStatus) => {
@@ -51,13 +75,25 @@ export default function Certificates() {
   };
 
   const setTracking = async (id: string, trackingId: string) => {
-    setItems((prev) => prev.map((r) => (r.id === id ? { ...r, courierTrackingId: trackingId } : r)));
-    await supabase.from("certificates").update({ courier_tracking_id: trackingId }).eq("id", id);
+    setItems((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, courierTrackingId: trackingId } : r,
+      ),
+    );
+    await supabase
+      .from("certificates")
+      .update({ courier_tracking_id: trackingId })
+      .eq("id", id);
   };
 
   const reprint = async (id: string) => {
-    setItems((prev) => prev.map((r) => (r.id === id ? { ...r, status: "Reprinting" } : r)));
-    await supabase.from("certificates").update({ status: "Reprinting" }).eq("id", id);
+    setItems((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: "Reprinting" } : r)),
+    );
+    await supabase
+      .from("certificates")
+      .update({ status: "Reprinting" })
+      .eq("id", id);
   };
 
   useEffect(() => {
@@ -91,8 +127,12 @@ export default function Certificates() {
   return (
     <div className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold tracking-tight">Certificate Management</h1>
-        <p className="text-sm text-muted-foreground">Requests, approvals, processing, types and reports.</p>
+        <h1 className="text-xl font-semibold tracking-tight">
+          Certificate Management
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Requests, approvals, processing, types and reports.
+        </p>
       </div>
 
       <Tabs defaultValue="requests">
@@ -113,7 +153,12 @@ export default function Certificates() {
         </TabsContent>
 
         <TabsContent value="processing">
-          <ProcessingTab data={items} onUpdateStatus={updateStatus} onSetTracking={setTracking} onReprint={reprint} />
+          <ProcessingTab
+            data={items}
+            onUpdateStatus={updateStatus}
+            onSetTracking={setTracking}
+            onReprint={reprint}
+          />
         </TabsContent>
 
         <TabsContent value="types">

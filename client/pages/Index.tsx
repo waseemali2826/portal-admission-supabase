@@ -37,7 +37,6 @@ import {
 import { getStoredCourses } from "@/lib/courseStore";
 import { supabase } from "@/lib/supabaseClient";
 
-
 type Course = {
   name: string;
   duration: string;
@@ -50,8 +49,6 @@ const seedCourses: Course[] = [
   { name: "Data Science", duration: "8 mo", fees: 80000, students: 12 },
   { name: "Digital Marketing", duration: "3 mo", fees: 40000, students: 22 },
 ];
-
-
 
 export default function Index() {
   const [coursesVersion, setCoursesVersion] = useState(0);
@@ -128,10 +125,17 @@ export default function Index() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <KPI title="Total Enquiries" value={`${enquiriesCount}`} icon={<ClipboardCheck className="h-5 w-5" />} />
-        <KPI title="Pending Applications" value={`${applicationsPendingCount}`} icon={<Users2 className="h-5 w-5" />} />
+        <KPI
+          title="Total Enquiries"
+          value={`${enquiriesCount}`}
+          icon={<ClipboardCheck className="h-5 w-5" />}
+        />
+        <KPI
+          title="Pending Applications"
+          value={`${applicationsPendingCount}`}
+          icon={<Users2 className="h-5 w-5" />}
+        />
       </div>
-
 
       <div className="grid gap-4 lg:grid-cols-1">
         <Card>
@@ -156,7 +160,11 @@ export default function Index() {
                       <TableCell>{e.contact || e.phone}</TableCell>
                       <TableCell>{e.course}</TableCell>
                       <TableCell className="text-right">
-                        <Badge variant={e.status === "Pending" ? "secondary" : "default"}>
+                        <Badge
+                          variant={
+                            e.status === "Pending" ? "secondary" : "default"
+                          }
+                        >
                           {e.status || "Pending"}
                         </Badge>
                       </TableCell>

@@ -27,22 +27,37 @@ export default function Students() {
   useEffect(() => {
     (async () => {
       try {
-        const { data, error } = await supabase.from("students").select("*").order("created_at", { ascending: false });
+        const { data, error } = await supabase
+          .from("students")
+          .select("*")
+          .order("created_at", { ascending: false });
         if (!error && data) {
-          const list: StudentRecord[] = data.map((r: any) => (r.record ? r.record : {
-            id: r.id,
-            name: r.name,
-            email: r.email,
-            phone: r.phone,
-            status: r.status || "Current",
-            admission: { course: r.course || "", batch: r.batch || "", campus: r.campus || "", date: r.date || new Date().toISOString() },
-            fee: { total: r.fee_total || 0, installments: r.fee_installments || [] },
-            attendance: r.attendance || [],
-            documents: r.documents || [],
-            communications: r.communications || [],
-            enrolledCourses: r.enrolled_courses || [],
-            notes: r.notes || undefined,
-          }));
+          const list: StudentRecord[] = data.map((r: any) =>
+            r.record
+              ? r.record
+              : {
+                  id: r.id,
+                  name: r.name,
+                  email: r.email,
+                  phone: r.phone,
+                  status: r.status || "Current",
+                  admission: {
+                    course: r.course || "",
+                    batch: r.batch || "",
+                    campus: r.campus || "",
+                    date: r.date || new Date().toISOString(),
+                  },
+                  fee: {
+                    total: r.fee_total || 0,
+                    installments: r.fee_installments || [],
+                  },
+                  attendance: r.attendance || [],
+                  documents: r.documents || [],
+                  communications: r.communications || [],
+                  enrolledCourses: r.enrolled_courses || [],
+                  notes: r.notes || undefined,
+                },
+          );
           setItems(list);
         }
       } catch {}

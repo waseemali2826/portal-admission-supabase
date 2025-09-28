@@ -119,18 +119,27 @@ export default function Enquiries() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const fromSupabase = serverPub.map((p: any): Enquiry => ({
-      id: String(p.id ?? p.enquiry_id ?? p.created_at ?? crypto.randomUUID?.() ?? Date.now()),
-      name: p.name,
-      course: p.course,
-      contact: p.contact ?? p.phone,
-      email: p.email ?? undefined,
-      city: p.city ?? "Lahore",
-      source: p.source ?? (Array.isArray(p.sources) ? p.sources[0] : "Website"),
-      nextFollow: p.next_follow ?? p.preferred_start ?? undefined,
-      stage: p.stage ?? "Prospective",
-      status: p.status ?? "Pending",
-    }));
+    const fromSupabase = serverPub.map(
+      (p: any): Enquiry => ({
+        id: String(
+          p.id ??
+            p.enquiry_id ??
+            p.created_at ??
+            crypto.randomUUID?.() ??
+            Date.now(),
+        ),
+        name: p.name,
+        course: p.course,
+        contact: p.contact ?? p.phone,
+        email: p.email ?? undefined,
+        city: p.city ?? "Lahore",
+        source:
+          p.source ?? (Array.isArray(p.sources) ? p.sources[0] : "Website"),
+        nextFollow: p.next_follow ?? p.preferred_start ?? undefined,
+        stage: p.stage ?? "Prospective",
+        status: p.status ?? "Pending",
+      }),
+    );
 
     const merged: Enquiry[] = fromSupabase;
     return merged.filter(
