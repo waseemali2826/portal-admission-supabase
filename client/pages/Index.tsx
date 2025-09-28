@@ -34,7 +34,7 @@ import {
   Wallet,
   BarChart2,
 } from "lucide-react";
-import { getStoredCourses } from "@/lib/courseStore";
+import { getStoredCourses, getAllCourseNames } from "@/lib/courseStore";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudents } from "@/lib/studentStore";
 import { studentsMock } from "./students/data";
