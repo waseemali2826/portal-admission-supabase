@@ -374,7 +374,15 @@ export default function Fees() {
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold">Fees & Installment Management</h1>
 
-      <Tabs defaultValue="setup">
+      <Tabs
+        value={(typeof window !== "undefined" && window.location.hash.slice(1)) || undefined}
+        defaultValue={(typeof window !== "undefined" && window.location.hash.slice(1)) || "setup"}
+        onValueChange={(v) => {
+          try {
+            if (typeof window !== "undefined") window.location.hash = v;
+          } catch {}
+        }}
+      >
         <TabsList className="flex flex-wrap gap-1">
           <TabsTrigger value="setup">Fee Structure Setup</TabsTrigger>
           <TabsTrigger value="student">Student Wise Fee Details</TabsTrigger>
