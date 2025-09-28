@@ -57,7 +57,9 @@ export default function Index() {
   const [recentEnquiries, setRecentEnquiries] = useState<any[]>([]);
   const [enquiriesCount, setEnquiriesCount] = useState(0);
   const [applicationsPendingCount, setApplicationsPendingCount] = useState(0);
+  const [courses, setCourses] = useState<Array<{ name: string; fees: number }>>([]);
 
+  // react to local course changes and storage
   useEffect(() => {
     const onChange = () => setCoursesVersion((v) => v + 1);
     window.addEventListener("courses:changed", onChange);
@@ -68,24 +70,55 @@ export default function Index() {
     };
   }, []);
 
-  const liveCourses = useMemo(() => {
-    const base: Course[] = seedCourses.map((c) => ({ ...c }));
-    try {
-      const stored = getStoredCourses();
-      const names = new Set(base.map((c) => c.name));
-      for (const sc of stored) {
-        if (!names.has(sc.name)) {
-          base.push({
-            name: sc.name,
-            duration: sc.duration,
-            fees: sc.fees,
-            students: 0,
-          });
+  // fetch courses from Supabase; fallback to local defaults
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("courses")
+          .select("name,fees,status,created_at")
+          .order("created_at", { ascending: false });
+        if (!error && Array.isArray(data)) {
+          setCourses(data.map((c: any) => ({ name: c.name, fees: Number(c.fees) || 0 })));
+        }
+      } catch {}
+      if (!courses.length) {
+        try {
+          const names = getAllCourseNames();
+          const stored = getStoredCourses();
+          const map = new Map<string, number>();
+          for (const s of stored) map.set(s.name, Number(s.fees) || 0);
+          const merged = names.map((n) => ({ name: n, fees: map.get(n) || 0 }));
+          setCourses(merged);
+        } catch {
+          setCourses(seedCourses.map((c) => ({ name: c.name, fees: c.fees })));
         }
       }
+    })();
+
+    try {
+      const ch = (supabase as any)?.channel?.("courses-dash");
+      if (ch && ch.on && ch.subscribe) {
+        ch.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "courses" },
+          () => {
+            // re-fetch on DB change
+            supabase
+              .from("courses")
+              .select("name,fees,status,created_at")
+              .order("created_at", { ascending: false })
+              .then(({ data }) => data && setCourses(data.map((c: any) => ({ name: c.name, fees: Number(c.fees) || 0 }))));
+          },
+        ).subscribe();
+        return () => {
+          try { ch.unsubscribe(); } catch {}
+        };
+      }
     } catch {}
-    return base;
   }, [coursesVersion]);
+
+  const liveCourses = useMemo(() => courses, [courses]);
 
   // Students & income stats
   const students = useMemo(() => {
