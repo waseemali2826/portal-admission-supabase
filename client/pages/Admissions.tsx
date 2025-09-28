@@ -98,33 +98,35 @@ export default function Admissions() {
   const [items, setItems] = useState<AdmissionRecord[]>([]);
 
   const fetchApplications = async () => {
-    const { data, error } = await supabase
-      .from("applications")
-      .select("*")
-      .order("app_id", { ascending: true });
-
+    // Avoid relying on a specific PK name; different setups may use app_id, id, or uuid
+    const { data, error } = await supabase.from("applications").select("*");
     if (error) {
       console.error("Error fetching applications:", error);
       return;
     }
-
-    const mapped: AdmissionRecord[] = (data ?? []).map((p: any) => ({
-      id: p.app_id?.toString() ?? "",
-      student: { name: p.name, email: p.email, phone: p.phone },
-      course: p.course,
-      batch: p.batch,
-      campus: p.campus,
-      startDate: p.start_date || undefined,
-      message: p.message || undefined,
-      fee: { total: p.fee_total ?? 0, installments: p.fee_installments || [] },
-      documents: p.documents || [],
-      notes: p.notes || undefined,
-      status: p.status || "Pending",
-      studentId: p.student_id,
-      rejectedReason: p.rejected_reason,
-      createdAt: p.created_at,
-    }));
-
+    const mapped: AdmissionRecord[] = (data ?? []).map((p: any) => {
+      const anyId = p.app_id ?? p.id ?? p.appId ?? p.appID;
+      const created = p.created_at ?? p.createdAt ?? new Date().toISOString();
+      return {
+        id: String(anyId ?? ""),
+        student: { name: p.name, email: p.email, phone: p.phone },
+        course: p.course,
+        batch: p.batch ?? "TBD",
+        campus: p.campus ?? "Main",
+        startDate: p.start_date || undefined,
+        message: p.message || undefined,
+        fee: {
+          total: p.fee_total ?? 0,
+          installments: p.fee_installments || [],
+        },
+        documents: p.documents || [],
+        notes: p.notes || undefined,
+        status: p.status || "Pending",
+        studentId: p.student_id ?? undefined,
+        rejectedReason: p.rejected_reason ?? undefined,
+        createdAt: created,
+      };
+    });
     setItems(mapped);
   };
 
@@ -136,26 +138,33 @@ export default function Admissions() {
 
   const upsert = async (next: AdmissionRecord) => {
     setItems((prev) => prev.map((r) => (r.id === next.id ? next : r)));
+    const idNum = Number(next.id);
+    const payload: any = {
+      status: next.status,
+      student_id: next.studentId || null,
+      batch: next.batch,
+      campus: next.campus,
+      rejected_reason: next.rejectedReason || null,
+      fee_total: next.fee?.total ?? null,
+      fee_installments: next.fee?.installments ?? null,
+      documents: next.documents ?? null,
+      notes: next.notes ?? null,
+    };
+    // Try updating by app_id, then fall back to id
     try {
-      const idNum = Number(next.id);
-      const payload: any = {
-        status: next.status,
-        student_id: next.studentId || null,
-        batch: next.batch,
-        campus: next.campus,
-        rejected_reason: next.rejectedReason || null,
-        fee_total: next.fee?.total ?? null,
-        fee_installments: next.fee?.installments ?? null,
-        documents: next.documents ?? null,
-        notes: next.notes ?? null,
-      };
-      const q = supabase.from("applications").update(payload);
-      const { error } = Number.isFinite(idNum)
-        ? await q.eq("app_id", idNum)
-        : await q.eq("app_id", next.id as any);
-      if (error) console.error("Failed to update application", error);
+      const byAppId = await supabase
+        .from("applications")
+        .update(payload)
+        .eq("app_id", Number.isFinite(idNum) ? idNum : next.id as any);
+      if (!byAppId.error) return;
+    } catch {}
+    try {
+      await supabase
+        .from("applications")
+        .update(payload)
+        .eq("id", Number.isFinite(idNum) ? idNum : next.id as any);
     } catch (e) {
-      console.error("Update error", e);
+      console.error("Failed to persist application update", e);
     }
   };
 
