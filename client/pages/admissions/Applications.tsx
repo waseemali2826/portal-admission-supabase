@@ -16,7 +16,7 @@
 //   onUpdate: (rec: AdmissionRecord) => void;
 // }) {
 //   const [query, setQuery] = useState("");
-//   const [filter, setFilter] = useState<"pending" | "verified" | "blocked">("pending");
+//   const [filter, setFilter] = useState<"unpaid" | "paid">("unpaid");
 //   const [openId, setOpenId] = useState<string | null>(null);
 
 //   const filtered = useMemo(() => {
@@ -128,7 +128,7 @@ export function ApplicationsTab({
   onUpdate: (rec: AdmissionRecord) => void;
 }) {
   const [query, setQuery] = useState("");
-  const [filter, setFilter] = useState<"pending" | "verified" | "blocked">("pending");
+  const [filter, setFilter] = useState<"unpaid" | "paid">("unpaid");
   const [openId, setOpenId] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
