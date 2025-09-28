@@ -85,6 +85,59 @@ export default function Index() {
     return base;
   }, [coursesVersion]);
 
+  // Students & income stats
+  const students = useMemo(() => {
+    try {
+      const { getStudents } = require("@/lib/studentStore");
+      const list = getStudents();
+      if (Array.isArray(list) && list.length) return list;
+    } catch {}
+    try {
+      const { studentsMock } = require("./students/data");
+      return studentsMock;
+    } catch {
+      return [] as any[];
+    }
+  }, []);
+
+  const totalIncome = useMemo(() => {
+    let sum = 0;
+    for (const s of students as any[]) {
+      for (const inst of s?.fee?.installments || []) {
+        if (inst.paidAt) sum += Number(inst.amount) || 0;
+      }
+    }
+    return sum;
+  }, [students]);
+
+  const incomeSeries = useMemo(() => {
+    const now = new Date();
+    const months = [...Array(6)].map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      return { key: `${d.getFullYear()}-${d.getMonth() + 1}`, label: d.toLocaleString(undefined, { month: "short" }) };
+    });
+    const map = new Map(months.map((m) => [m.key, { month: m.label, income: 0 }]));
+    for (const s of students as any[]) {
+      for (const inst of s?.fee?.installments || []) {
+        if (inst.paidAt) {
+          const d = new Date(inst.paidAt);
+          const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+          if (map.has(key)) map.get(key)!.income += Number(inst.amount) || 0;
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [students]);
+
+  const enrollByCourse = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const s of students as any[]) {
+      const c = s?.admission?.course || "Unknown";
+      counts.set(c, (counts.get(c) || 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([course, count]) => ({ course, count }));
+  }, [students]);
+
   useEffect(() => {
     (async () => {
       try {
@@ -135,6 +188,61 @@ export default function Index() {
           value={`${applicationsPendingCount}`}
           icon={<Users2 className="h-5 w-5" />}
         />
+        <KPI
+          title="Total Courses"
+          value={`${liveCourses.length}`}
+          icon={<BookOpen className="h-5 w-5" />}
+        />
+        <KPI
+          title="Total Income"
+          value={`₨ ${totalIncome.toLocaleString()}`}
+          icon={<Banknote className="h-5 w-5" />}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Income (last 6 months)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{ income: { label: "Income", color: "hsl(var(--primary))" } }}
+              className="h-[260px]"
+            >
+              <LineChart data={incomeSeries} margin={{ left: 8, right: 8 }}>
+                <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <Line
+                  dataKey="income"
+                  type="monotone"
+                  stroke="var(--color-income)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Enrollments by Course</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{ count: { label: "Students", color: "hsl(var(--primary))" } }}
+              className="h-[260px]"
+            >
+              <BarChart data={enrollByCourse} margin={{ left: 8, right: 8 }}>
+                <XAxis dataKey="course" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-1">
