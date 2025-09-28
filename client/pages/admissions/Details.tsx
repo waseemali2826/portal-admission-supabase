@@ -7,6 +7,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useState } from "react";
 import { genStudentId, paymentStatus } from "./types";
 import type { AdmissionRecord } from "./types";
+import { upsertStudent } from "@/lib/studentStore";
+import type { StudentRecord } from "@/pages/students/types";
+import { useNavigate } from "react-router-dom";
 
 export function Details({
   rec,
@@ -18,12 +21,54 @@ export function Details({
   const { toast } = useToast();
   const [batch, setBatch] = useState(rec.batch);
   const [campus, setCampus] = useState(rec.campus);
+  const navigate = useNavigate();
 
   const approve = () => {
     if (rec.status === "Verified") return;
     const id = rec.studentId || genStudentId(rec.student.name);
     onChange({ ...rec, status: "Verified", studentId: id });
     toast({ title: `Approved. Student ID ${id}` });
+  };
+
+  const confirmAdmission = () => {
+    const id = rec.studentId || genStudentId(rec.student.name);
+    const next: AdmissionRecord = {
+      ...rec,
+      status: "Verified",
+      studentId: id,
+      batch,
+      campus,
+    };
+    onChange(next);
+
+    const student: StudentRecord = {
+      id,
+      name: next.student.name,
+      email: next.student.email,
+      phone: next.student.phone,
+      status: "Current",
+      admission: {
+        course: next.course,
+        batch: next.batch,
+        campus: next.campus,
+        date: new Date(next.createdAt).toISOString(),
+      },
+      fee: {
+        total: next.fee.total || 0,
+        installments: next.fee.installments.map((i) => ({
+          id: i.id,
+          amount: i.amount,
+          dueDate: i.dueDate,
+          paidAt: i.paidAt,
+        })),
+      },
+      attendance: [],
+      documents: [],
+      communications: [],
+    };
+    upsertStudent(student);
+    navigate("/dashboard/fees#student");
+    toast({ title: "Admission confirmed", description: `Student added: ${student.name}` });
   };
 
   const reject = () => {
@@ -227,6 +272,7 @@ export function Details({
 
       <div className="flex flex-wrap gap-2">
         <Button onClick={approve}>Approve & Generate ID</Button>
+        <Button onClick={confirmAdmission}>Confirm Admission</Button>
         <Button variant="destructive" onClick={reject}>
           Reject
         </Button>
