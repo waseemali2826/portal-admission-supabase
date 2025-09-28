@@ -173,6 +173,8 @@ export default function Contact() {
               <iframe
                 title="map"
                 className="h-full w-full"
+                loading="eager"
+                referrerPolicy="no-referrer-when-downgrade"
                 src="https://www.openstreetmap.org/export/embed.html?bbox=66.99%2C24.84%2C67.13%2C24.92&amp;layer=mapnik"
               ></iframe>
             </div>
