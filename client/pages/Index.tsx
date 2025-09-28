@@ -54,6 +54,7 @@ const seedCourses: Course[] = [
 
 export default function Index() {
   const [coursesVersion, setCoursesVersion] = useState(0);
+  const [studentsVersion, setStudentsVersion] = useState(0);
   const [recentEnquiries, setRecentEnquiries] = useState<any[]>([]);
   const [enquiriesCount, setEnquiriesCount] = useState(0);
   const [applicationsPendingCount, setApplicationsPendingCount] = useState(0);
@@ -67,6 +68,17 @@ export default function Index() {
     return () => {
       window.removeEventListener("courses:changed", onChange);
       window.removeEventListener("storage", onChange);
+    };
+  }, []);
+
+  // react to students changes
+  useEffect(() => {
+    const onStu = () => setStudentsVersion((v) => v + 1);
+    window.addEventListener("students:changed", onStu as any);
+    window.addEventListener("storage", onStu);
+    return () => {
+      window.removeEventListener("students:changed", onStu as any);
+      window.removeEventListener("storage", onStu);
     };
   }, []);
 
