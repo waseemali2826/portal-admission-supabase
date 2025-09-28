@@ -134,8 +134,29 @@ export default function Admissions() {
     return () => clearInterval(interval);
   }, []);
 
-  const upsert = (next: AdmissionRecord) => {
+  const upsert = async (next: AdmissionRecord) => {
     setItems((prev) => prev.map((r) => (r.id === next.id ? next : r)));
+    try {
+      const idNum = Number(next.id);
+      const payload: any = {
+        status: next.status,
+        student_id: next.studentId || null,
+        batch: next.batch,
+        campus: next.campus,
+        rejected_reason: next.rejectedReason || null,
+        fee_total: next.fee?.total ?? null,
+        fee_installments: next.fee?.installments ?? null,
+        documents: next.documents ?? null,
+        notes: next.notes ?? null,
+      };
+      const q = supabase.from("applications").update(payload);
+      const { error } = Number.isFinite(idNum)
+        ? await q.eq("app_id", idNum)
+        : await q.eq("app_id", next.id as any);
+      if (error) console.error("Failed to update application", error);
+    } catch (e) {
+      console.error("Update error", e);
+    }
   };
 
   return (
