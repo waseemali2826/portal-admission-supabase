@@ -26,7 +26,7 @@ export function PublicHeader() {
             <span>EduAdmin</span>
           </Link>
         </div>
-        <nav className="hidden gap-6 text-sm md:flex">
+        <nav aria-label="Primary" className="hidden gap-6 text-sm md:flex">
           <NavLink
             to="/"
             onMouseEnter={preloadHome}
@@ -89,7 +89,10 @@ export function PublicHeader() {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64 sm:w-80">
-                <nav className="flex flex-col gap-1 p-4 text-sm">
+                <nav
+                  aria-label="Mobile"
+                  className="flex flex-col gap-1 p-4 text-sm"
+                >
                   <SheetClose asChild>
                     <NavLink
                       to="/"

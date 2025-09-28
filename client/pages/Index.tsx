@@ -34,8 +34,10 @@ import {
   Wallet,
   BarChart2,
 } from "lucide-react";
-import { getStoredCourses } from "@/lib/courseStore";
+import { getStoredCourses, getAllCourseNames } from "@/lib/courseStore";
 import { supabase } from "@/lib/supabaseClient";
+import { getStudents } from "@/lib/studentStore";
+import { studentsMock } from "./students/data";
 
 type Course = {
   name: string;
@@ -52,10 +54,16 @@ const seedCourses: Course[] = [
 
 export default function Index() {
   const [coursesVersion, setCoursesVersion] = useState(0);
+  const [studentsVersion, setStudentsVersion] = useState(0);
   const [recentEnquiries, setRecentEnquiries] = useState<any[]>([]);
   const [enquiriesCount, setEnquiriesCount] = useState(0);
   const [applicationsPendingCount, setApplicationsPendingCount] = useState(0);
+  const [courses, setCourses] = useState<Array<{ name: string; fees: number }>>(
+    [],
+  );
+  const [studentsOnline, setStudentsOnline] = useState<any[]>([]);
 
+  // react to local course changes and storage
   useEffect(() => {
     const onChange = () => setCoursesVersion((v) => v + 1);
     window.addEventListener("courses:changed", onChange);
@@ -66,24 +74,179 @@ export default function Index() {
     };
   }, []);
 
-  const liveCourses = useMemo(() => {
-    const base: Course[] = seedCourses.map((c) => ({ ...c }));
-    try {
-      const stored = getStoredCourses();
-      const names = new Set(base.map((c) => c.name));
-      for (const sc of stored) {
-        if (!names.has(sc.name)) {
-          base.push({
-            name: sc.name,
-            duration: sc.duration,
-            fees: sc.fees,
-            students: 0,
-          });
+  // react to students changes
+  useEffect(() => {
+    const onStu = () => setStudentsVersion((v) => v + 1);
+    window.addEventListener("students:changed", onStu as any);
+    window.addEventListener("storage", onStu);
+    return () => {
+      window.removeEventListener("students:changed", onStu as any);
+      window.removeEventListener("storage", onStu);
+    };
+  }, []);
+
+  // fetch courses from Supabase; fallback to local defaults
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("courses")
+          .select("name,fees,status,created_at")
+          .order("created_at", { ascending: false });
+        if (!error && Array.isArray(data)) {
+          setCourses(
+            data.map((c: any) => ({ name: c.name, fees: Number(c.fees) || 0 })),
+          );
+        }
+      } catch {}
+      if (!courses.length) {
+        try {
+          const names = getAllCourseNames();
+          const stored = getStoredCourses();
+          const map = new Map<string, number>();
+          for (const s of stored) map.set(s.name, Number(s.fees) || 0);
+          const merged = names.map((n) => ({ name: n, fees: map.get(n) || 0 }));
+          setCourses(merged);
+        } catch {
+          setCourses(seedCourses.map((c) => ({ name: c.name, fees: c.fees })));
         }
       }
+    })();
+
+    try {
+      const ch = (supabase as any)?.channel?.("courses-dash");
+      if (ch && ch.on && ch.subscribe) {
+        ch.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "courses" },
+          () => {
+            // re-fetch on DB change
+            supabase
+              .from("courses")
+              .select("name,fees,status,created_at")
+              .order("created_at", { ascending: false })
+              .then(
+                ({ data }) =>
+                  data &&
+                  setCourses(
+                    data.map((c: any) => ({
+                      name: c.name,
+                      fees: Number(c.fees) || 0,
+                    })),
+                  ),
+              );
+          },
+        ).subscribe();
+        return () => {
+          try {
+            ch.unsubscribe();
+          } catch {}
+        };
+      }
     } catch {}
-    return base;
   }, [coursesVersion]);
+
+  // fetch students from Supabase (records saved by AdmissionForm), realtime updates
+  useEffect(() => {
+    (async () => {
+      try {
+        const { data, error } = await supabase
+          .from("students")
+          .select("record")
+          .order("id", { ascending: false });
+        if (!error && Array.isArray(data))
+          setStudentsOnline(data.map((x: any) => x.record).filter(Boolean));
+      } catch {}
+    })();
+
+    try {
+      const ch = (supabase as any)?.channel?.("students-dash");
+      if (ch && ch.on && ch.subscribe) {
+        ch.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "students" },
+          () => {
+            supabase
+              .from("students")
+              .select("record")
+              .order("id", { ascending: false })
+              .then(
+                ({ data }) =>
+                  data &&
+                  setStudentsOnline(
+                    data.map((x: any) => x.record).filter(Boolean),
+                  ),
+              );
+          },
+        ).subscribe();
+        return () => {
+          try {
+            ch.unsubscribe();
+          } catch {}
+        };
+      }
+    } catch {}
+  }, []);
+
+  const liveCourses = useMemo(() => courses, [courses]);
+
+  // Students & income stats (prefer live DB, fallback to local/mock)
+  const students = useMemo(() => {
+    if (studentsOnline.length) return studentsOnline as any[];
+    try {
+      const list = getStudents();
+      if (Array.isArray(list) && list.length) return list;
+    } catch {}
+    return studentsMock as any[];
+  }, [studentsVersion, studentsOnline]);
+
+  const totalIncome = useMemo(() => {
+    let sum = 0;
+    for (const s of students as any[]) {
+      for (const inst of s?.fee?.installments || []) {
+        if (inst.paidAt) sum += Number(inst.amount) || 0;
+      }
+    }
+    return sum;
+  }, [students]);
+
+  const incomeSeries = useMemo(() => {
+    const now = new Date();
+    const months = [...Array(6)].map((_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      return {
+        key: `${d.getFullYear()}-${d.getMonth() + 1}`,
+        label: d.toLocaleString(undefined, { month: "short" }),
+      };
+    });
+    const map = new Map(
+      months.map((m) => [m.key, { month: m.label, income: 0 }]),
+    );
+    for (const s of students as any[]) {
+      for (const inst of s?.fee?.installments || []) {
+        if (inst.paidAt) {
+          const d = new Date(inst.paidAt);
+          const key = `${d.getFullYear()}-${d.getMonth() + 1}`;
+          if (map.has(key)) map.get(key)!.income += Number(inst.amount) || 0;
+        }
+      }
+    }
+    return Array.from(map.values());
+  }, [students]);
+
+  const enrollByCourse = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const c of liveCourses) counts.set(c.name, 0);
+    for (const s of students as any[]) {
+      const c = s?.admission?.course;
+      if (!c) continue;
+      counts.set(c, (counts.get(c) || 0) + 1);
+    }
+    return Array.from(counts.entries()).map(([course, count]) => ({
+      course,
+      count,
+    }));
+  }, [students, liveCourses]);
 
   useEffect(() => {
     (async () => {
@@ -135,6 +298,71 @@ export default function Index() {
           value={`${applicationsPendingCount}`}
           icon={<Users2 className="h-5 w-5" />}
         />
+        <KPI
+          title="Total Courses"
+          value={`${liveCourses.length}`}
+          icon={<BookOpen className="h-5 w-5" />}
+        />
+        <KPI
+          title="Total Income"
+          value={`₨ ${totalIncome.toLocaleString()}`}
+          icon={<Banknote className="h-5 w-5" />}
+        />
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Income (last 6 months)</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                income: { label: "Income", color: "hsl(var(--primary))" },
+              }}
+              className="h-[260px]"
+            >
+              <LineChart data={incomeSeries} margin={{ left: 8, right: 8 }}>
+                <XAxis dataKey="month" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <Line
+                  dataKey="income"
+                  type="monotone"
+                  stroke="var(--color-income)"
+                  strokeWidth={2}
+                  dot={false}
+                />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent />}
+                />
+              </LineChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Enrollments by Course</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                count: { label: "Students", color: "hsl(var(--primary))" },
+              }}
+              className="h-[260px]"
+            >
+              <BarChart data={enrollByCourse} margin={{ left: 8, right: 8 }}>
+                <XAxis dataKey="course" tickLine={false} axisLine={false} />
+                <YAxis tickLine={false} axisLine={false} />
+                <Bar dataKey="count" fill="var(--color-count)" radius={4} />
+                <ChartTooltip
+                  cursor={false}
+                  content={<ChartTooltipContent />}
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-1">
@@ -143,7 +371,7 @@ export default function Index() {
             <CardTitle>Recent Enquiries</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="rounded-md border">
+            <div className="rounded-md border overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>

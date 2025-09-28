@@ -107,9 +107,6 @@
 //   );
 // }
 
-
-
-
 import { useState, FormEvent } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
@@ -130,13 +127,16 @@ export default function Contact() {
     e.preventDefault();
     setSending(true);
     try {
-      const { error } = await supabase.from("contacts").insert([
-        { name, email, message },
-      ]);
+      const { error } = await supabase
+        .from("contacts")
+        .insert([{ name, email, message }]);
 
       if (error) throw error;
 
-      toast({ title: "Message sent", description: "Thanks for contacting us." });
+      toast({
+        title: "Message sent",
+        description: "Thanks for contacting us.",
+      });
       setName("");
       setEmail("");
       setMessage("");
@@ -160,8 +160,8 @@ export default function Contact() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div>
-              <span className="font-medium">Address:</span> 123 Main Road, City
-              Campus
+              <span className="font-medium">Address:</span> Skills Institute,
+              Susan Road, Chenab Market, Faisalabad
             </div>
             <div>
               <span className="font-medium">Phone:</span> +92 300 1234567
@@ -173,7 +173,9 @@ export default function Contact() {
               <iframe
                 title="map"
                 className="h-full w-full"
-                src="https://www.openstreetmap.org/export/embed.html?bbox=66.99%2C24.84%2C67.13%2C24.92&amp;layer=mapnik"
+                loading="eager"
+                referrerPolicy="no-referrer-when-downgrade"
+                src="https://www.openstreetmap.org/export/embed.html?bbox=73.1075%2C31.4102%2C73.1275%2C31.4302&layer=mapnik&marker=31.4202%2C73.1175"
               ></iframe>
             </div>
           </CardContent>
