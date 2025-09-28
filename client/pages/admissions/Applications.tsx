@@ -141,12 +141,8 @@ export function ApplicationsTab({
       r.batch.toLowerCase().includes(q) ||
       r.campus.toLowerCase().includes(q),
     );
-    const by: Record<typeof filter, AdmissionStatus[]> = {
-      pending: ["Pending"],
-      verified: ["Verified"],
-      blocked: ["Cancelled", "Suspended"],
-    } as const;
-    rows = rows.filter((r) => by[filter].includes(r.status));
+    const isPaid = (r: AdmissionRecord) => paymentStatus(r) === "Paid";
+    rows = rows.filter((r) => (filter === "paid" ? isPaid(r) : !isPaid(r)));
     return rows;
   }, [data, query, filter]);
 
