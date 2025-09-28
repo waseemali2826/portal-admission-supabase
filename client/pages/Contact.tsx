@@ -160,8 +160,7 @@ export default function Contact() {
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <div>
-              <span className="font-medium">Address:</span> 123 Main Road, City
-              Campus
+              <span className="font-medium">Address:</span> Skills Institute, Susan Road, Chenab Market, Faisalabad
             </div>
             <div>
               <span className="font-medium">Phone:</span> +92 300 1234567
