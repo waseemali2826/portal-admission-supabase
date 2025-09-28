@@ -34,7 +34,6 @@ import {
   Users2,
   CalendarDays,
 } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 
 const recoverySeries: Array<{
