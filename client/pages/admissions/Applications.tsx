@@ -187,8 +187,8 @@ export function ApplicationsTab({
               </TableCell>
               <TableCell>{r.campus}</TableCell>
               <TableCell>
-                <Badge variant={paymentStatus(r) === "Overdue" ? "destructive" : paymentStatus(r) === "Paid" ? "default" : "secondary"}>
-                  {paymentStatus(r)}
+                <Badge variant={paymentStatus(r) === "Paid" ? "default" : "secondary"}>
+                  {paymentStatus(r) === "Paid" ? "Paid" : "Unpaid"}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
