@@ -36,6 +36,8 @@ import {
 } from "lucide-react";
 import { getStoredCourses } from "@/lib/courseStore";
 import { supabase } from "@/lib/supabaseClient";
+import { getStudents } from "@/lib/studentStore";
+import { studentsMock } from "./students/data";
 
 type Course = {
   name: string;
