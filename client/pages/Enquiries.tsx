@@ -261,15 +261,30 @@ export default function Enquiries() {
 function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
   const [probability, setProbability] = useState<number[]>([50]);
   const [sources, setSources] = useState<string[]>([]);
-  const [version, setVersion] = useState(0);
-  const courses = useMemo(() => getAllCourseNames(), [version]);
+  const [courses, setCourses] = useState<string[]>([]);
   useEffect(() => {
-    const bump = () => setVersion((v) => v + 1);
-    window.addEventListener("courses:changed", bump);
-    window.addEventListener("storage", bump);
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("courses")
+          .select("name,status,created_at")
+          .eq("status", "live")
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          const names = data.map((d: any) => String(d.name || "")).filter(Boolean);
+          setCourses(Array.from(new Set(names)));
+          return;
+        }
+      } catch {}
+      setCourses(getAllCourseNames());
+    };
+    load();
+    const refresh = () => load();
+    window.addEventListener("courses:changed", refresh as EventListener);
+    window.addEventListener("storage", refresh as EventListener);
     return () => {
-      window.removeEventListener("courses:changed", bump);
-      window.removeEventListener("storage", bump);
+      window.removeEventListener("courses:changed", refresh as EventListener);
+      window.removeEventListener("storage", refresh as EventListener);
     };
   }, []);
 
