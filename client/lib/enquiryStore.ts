@@ -30,7 +30,9 @@ export function getLocalEnquiries(): EnquiryLocal[] {
   }
 }
 
-export function addLocalEnquiry(input: Omit<EnquiryLocal, "id" | "created_at"> & { id?: string; }): EnquiryLocal {
+export function addLocalEnquiry(
+  input: Omit<EnquiryLocal, "id" | "created_at"> & { id?: string },
+): EnquiryLocal {
   const list = getLocalEnquiries();
   const rec: EnquiryLocal = {
     id: input.id || `ENQ-${Date.now()}`,
@@ -38,15 +40,25 @@ export function addLocalEnquiry(input: Omit<EnquiryLocal, "id" | "created_at"> &
     ...input,
   } as EnquiryLocal;
   const idx = list.findIndex((e) => e.id === rec.id);
-  const next = idx >= 0 ? [...list.slice(0, idx), rec, ...list.slice(idx + 1)] : [rec, ...list];
+  const next =
+    idx >= 0
+      ? [...list.slice(0, idx), rec, ...list.slice(idx + 1)]
+      : [rec, ...list];
   localStorage.setItem(KEY, JSON.stringify(next));
   try {
-    window.dispatchEvent(new CustomEvent("enquiries:changed", { detail: { type: idx >= 0 ? "upsert" : "add", enquiry: rec } }));
+    window.dispatchEvent(
+      new CustomEvent("enquiries:changed", {
+        detail: { type: idx >= 0 ? "upsert" : "add", enquiry: rec },
+      }),
+    );
   } catch {}
   return rec;
 }
 
-export function updateLocalEnquiry(id: string, patch: Partial<EnquiryLocal>): EnquiryLocal | null {
+export function updateLocalEnquiry(
+  id: string,
+  patch: Partial<EnquiryLocal>,
+): EnquiryLocal | null {
   const list = getLocalEnquiries();
   const idx = list.findIndex((e) => e.id === id);
   if (idx < 0) return null;
@@ -55,7 +67,11 @@ export function updateLocalEnquiry(id: string, patch: Partial<EnquiryLocal>): En
   next[idx] = rec;
   localStorage.setItem(KEY, JSON.stringify(next));
   try {
-    window.dispatchEvent(new CustomEvent("enquiries:changed", { detail: { type: "upsert", enquiry: rec } }));
+    window.dispatchEvent(
+      new CustomEvent("enquiries:changed", {
+        detail: { type: "upsert", enquiry: rec },
+      }),
+    );
   } catch {}
   return rec;
 }

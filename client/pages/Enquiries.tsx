@@ -50,7 +50,11 @@ import {
   UserPlus,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { getLocalEnquiries, addLocalEnquiry, updateLocalEnquiry } from "@/lib/enquiryStore";
+import {
+  getLocalEnquiries,
+  addLocalEnquiry,
+  updateLocalEnquiry,
+} from "@/lib/enquiryStore";
 import { getAllCourseNames } from "@/lib/courseStore";
 import { useNavigate } from "react-router-dom";
 
@@ -124,7 +128,10 @@ export default function Enquiries() {
     window.addEventListener("enquiries:changed", onChange as EventListener);
     window.addEventListener("storage", onChange as EventListener);
     return () => {
-      window.removeEventListener("enquiries:changed", onChange as EventListener);
+      window.removeEventListener(
+        "enquiries:changed",
+        onChange as EventListener,
+      );
       window.removeEventListener("storage", onChange as EventListener);
     };
   }, []);
@@ -248,7 +255,11 @@ export default function Enquiries() {
       </div>
 
       {view === "Create New Enquiry" && (
-        <CreateEnquiry onCreated={(row) => setServerPub((prev) => (row ? [row, ...prev] : prev))} />
+        <CreateEnquiry
+          onCreated={(row) =>
+            setServerPub((prev) => (row ? [row, ...prev] : prev))
+          }
+        />
       )}
       {view === "Import Bulk Enquiries" && <ImportBulk />}
       {view === "Enquiry Follow-Up" && (
@@ -272,7 +283,9 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
           .eq("status", "live")
           .order("created_at", { ascending: false });
         if (!error && data) {
-          const names = data.map((d: any) => String(d.name || "")).filter(Boolean);
+          const names = data
+            .map((d: any) => String(d.name || ""))
+            .filter(Boolean);
           setCourses(Array.from(new Set(names)));
           return;
         }
@@ -356,11 +369,18 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
                 status: payload.status,
               });
               console.warn("Enquiry save failed; stored locally", error);
-              toast({ title: "Saved locally", description: "Server unreachable or blocked. Enquiry saved on this device." });
+              toast({
+                title: "Saved locally",
+                description:
+                  "Server unreachable or blocked. Enquiry saved on this device.",
+              });
             } else {
               // Save locally as well to keep offline copy (de-duped by id)
               addLocalEnquiry({
-                id: String((Array.isArray(data) ? data[0]?.id : (data as any)?.id) ?? `ENQ-${Date.now()}`),
+                id: String(
+                  (Array.isArray(data) ? data[0]?.id : (data as any)?.id) ??
+                    `ENQ-${Date.now()}`,
+                ),
                 name: payload.name,
                 course: payload.course,
                 contact: payload.contact,
@@ -698,8 +718,10 @@ function FollowUp({
 
 function FollowTable({ data }: { data: Enquiry[] }) {
   const navigate = useNavigate();
-  const phoneLink = (p: string) => `tel:${String(p || "").replace(/[^\d+]/g, "")}`;
-  const smsLink = (p: string) => `sms:${String(p || "").replace(/[^\d+]/g, "")}`;
+  const phoneLink = (p: string) =>
+    `tel:${String(p || "").replace(/[^\d+]/g, "")}`;
+  const smsLink = (p: string) =>
+    `sms:${String(p || "").replace(/[^\d+]/g, "")}`;
   const waLink = (p: string, text: string) => {
     const num = String(p || "").replace(/[^\d]/g, "");
     const q = encodeURIComponent(text);
@@ -749,7 +771,9 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         <DropdownMenuLabel>Contact</DropdownMenuLabel>
                         <DropdownMenuItem
                           onClick={() => {
-                            try { window.open(phoneLink(e.contact), "_blank"); } catch {}
+                            try {
+                              window.open(phoneLink(e.contact), "_blank");
+                            } catch {}
                             toast({ title: `Calling ${e.contact}` });
                           }}
                         >
@@ -758,7 +782,9 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            try { window.open(smsLink(e.contact), "_blank"); } catch {}
+                            try {
+                              window.open(smsLink(e.contact), "_blank");
+                            } catch {}
                             toast({ title: `SMS to ${e.contact}` });
                           }}
                         >
@@ -767,7 +793,11 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            if (e.email) { try { window.open(`mailto:${e.email}`); } catch {} }
+                            if (e.email) {
+                              try {
+                                window.open(`mailto:${e.email}`);
+                              } catch {}
+                            }
                             toast({ title: `Email to ${e.email || "N/A"}` });
                           }}
                         >
@@ -782,7 +812,15 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            try { window.open(waLink(e.contact, `Assalam o Alaikum ${e.name}, this is regarding your enquiry for ${e.course}.`), "_blank"); } catch {}
+                            try {
+                              window.open(
+                                waLink(
+                                  e.contact,
+                                  `Assalam o Alaikum ${e.name}, this is regarding your enquiry for ${e.course}.`,
+                                ),
+                                "_blank",
+                              );
+                            } catch {}
                             toast({ title: `WhatsApp to ${e.contact}` });
                           }}
                         >
@@ -791,7 +829,9 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            updateLocalEnquiry(e.id, { next_follow: new Date().toISOString() } as any);
+                            updateLocalEnquiry(e.id, {
+                              next_follow: new Date().toISOString(),
+                            } as any);
                             toast({ title: `Walk-In scheduled` });
                           }}
                         >
@@ -801,7 +841,10 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         <DropdownMenuItem
                           onClick={() => {
                             const to = prompt("Transfer to (name/desk)?") || "";
-                            if (to) updateLocalEnquiry(e.id, { remarks: `Transferred to ${to}` } as any);
+                            if (to)
+                              updateLocalEnquiry(e.id, {
+                                remarks: `Transferred to ${to}`,
+                              } as any);
                             toast({ title: `Transferred enquiry ${e.id}` });
                           }}
                         >
@@ -812,7 +855,9 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         <DropdownMenuLabel>Outcome</DropdownMenuLabel>
                         <DropdownMenuItem
                           onClick={() => {
-                            updateLocalEnquiry(e.id, { status: "Enrolled" } as any);
+                            updateLocalEnquiry(e.id, {
+                              status: "Enrolled",
+                            } as any);
                             const url = `/admission-form?course=${encodeURIComponent(e.course)}&name=${encodeURIComponent(e.name)}&phone=${encodeURIComponent(e.contact)}&email=${encodeURIComponent(e.email || "")}`;
                             navigate(url);
                           }}
@@ -822,9 +867,16 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            const reason = prompt("Reason for not interested?") || "";
-                            updateLocalEnquiry(e.id, { status: "Not Interested", remarks: reason } as any);
-                            toast({ title: `Marked Not Interested`, description: reason || "No reason specified" });
+                            const reason =
+                              prompt("Reason for not interested?") || "";
+                            updateLocalEnquiry(e.id, {
+                              status: "Not Interested",
+                              remarks: reason,
+                            } as any);
+                            toast({
+                              title: `Marked Not Interested`,
+                              description: reason || "No reason specified",
+                            });
                           }}
                         >
                           <XCircle className="h-4 w-4 mr-2" />

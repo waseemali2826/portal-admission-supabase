@@ -216,7 +216,6 @@
 //   );
 // }
 
-
 // import { useState, FormEvent } from "react";
 // import { Input } from "@/components/ui/input";
 // import { Textarea } from "@/components/ui/textarea";
@@ -397,7 +396,6 @@
 //   );
 // }
 
-
 import { useState, useEffect, FormEvent } from "react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -432,7 +430,11 @@ export default function AdmissionForm() {
   const [startDate, setStartDate] = useState("");
   const [message, setMessage] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [voucher, setVoucher] = useState<null | { id: string; amount: number; course: string }>(null);
+  const [voucher, setVoucher] = useState<null | {
+    id: string;
+    amount: number;
+    course: string;
+  }>(null);
   const [courses, setCourses] = useState<Course[]>([]);
 
   // Fetch courses dynamically from Supabase
@@ -455,7 +457,8 @@ export default function AdmissionForm() {
     fetchCourses();
   }, []);
 
-  const courseFee = (name: string) => courses.find((c) => c.name === name)?.fees || 0;
+  const courseFee = (name: string) =>
+    courses.find((c) => c.name === name)?.fees || 0;
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -474,7 +477,9 @@ export default function AdmissionForm() {
         batch: "TBD",
         campus: "Main",
         fee_total: amount,
-        fee_installments: [{ id: "V1", amount, dueDate: new Date().toISOString() }],
+        fee_installments: [
+          { id: "V1", amount, dueDate: new Date().toISOString() },
+        ],
         documents: [],
       },
     ]);
@@ -487,7 +492,10 @@ export default function AdmissionForm() {
     }
 
     setVoucher({ id: `VCH-${Date.now()}`, amount, course });
-    toast({ title: "Fee voucher generated", description: `Amount ₨ ${amount.toLocaleString()}` });
+    toast({
+      title: "Fee voucher generated",
+      description: `Amount ₨ ${amount.toLocaleString()}`,
+    });
   };
 
   async function markPaid() {
@@ -510,7 +518,12 @@ export default function AdmissionForm() {
         fee: {
           total: voucher.amount,
           installments: [
-            { id: "V1", amount: voucher.amount, dueDate: new Date().toISOString(), paidAt: new Date().toISOString() },
+            {
+              id: "V1",
+              amount: voucher.amount,
+              dueDate: new Date().toISOString(),
+              paidAt: new Date().toISOString(),
+            },
           ],
         },
         attendance: [],
@@ -520,7 +533,9 @@ export default function AdmissionForm() {
     } as any;
 
     try {
-      const { error } = await supabase.from("students").upsert(record, { onConflict: "id" });
+      const { error } = await supabase
+        .from("students")
+        .upsert(record, { onConflict: "id" });
       if (error) throw error;
     } catch {
       try {
@@ -529,11 +544,17 @@ export default function AdmissionForm() {
       } catch {}
     }
 
-    toast({ title: "Fee received", description: "Student added to directory." });
+    toast({
+      title: "Fee received",
+      description: "Student added to directory.",
+    });
     navigate("/dashboard/students");
   }
 
-  function printVoucher(v: { id: string; amount: number; course: string }, name: string) {
+  function printVoucher(
+    v: { id: string; amount: number; course: string },
+    name: string,
+  ) {
     const w = window.open("", "_blank");
     if (!w) return;
     const html = `<!doctype html><html><head><meta charset='utf-8'><title>Voucher ${v.id}</title>
@@ -556,15 +577,31 @@ export default function AdmissionForm() {
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div>
             <Label htmlFor="fullName">Student Name</Label>
-            <Input id="fullName" value={fullName} onChange={(e) => setFullName(e.target.value)} required />
+            <Input
+              id="fullName"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              required
+            />
           </div>
           <div>
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+            <Input
+              id="email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
           </div>
           <div>
             <Label htmlFor="phone">Phone</Label>
-            <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} required />
+            <Input
+              id="phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              required
+            />
           </div>
           <div>
             <Label htmlFor="course">Select Course</Label>
@@ -583,11 +620,20 @@ export default function AdmissionForm() {
           </div>
           <div>
             <Label htmlFor="start">Starting Date Preference</Label>
-            <Input id="start" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+            <Input
+              id="start"
+              type="date"
+              value={startDate}
+              onChange={(e) => setStartDate(e.target.value)}
+            />
           </div>
           <div>
             <Label htmlFor="message">Message (optional)</Label>
-            <Textarea id="message" value={message} onChange={(e) => setMessage(e.target.value)} />
+            <Textarea
+              id="message"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+            />
           </div>
           <Button type="submit" disabled={submitting}>
             {submitting ? "Submitting…" : "Generate Fee Voucher"}
@@ -596,14 +642,25 @@ export default function AdmissionForm() {
       ) : (
         <div className="mt-6 space-y-4 rounded-md border p-4">
           <div className="text-lg font-semibold">Fee Voucher</div>
-          <div className="text-sm text-muted-foreground">Voucher #: {voucher.id}</div>
+          <div className="text-sm text-muted-foreground">
+            Voucher #: {voucher.id}
+          </div>
           <div className="text-sm">Student: {fullName}</div>
           <div className="text-sm">Course: {voucher.course}</div>
-          <div className="text-sm">Amount: ₨ {voucher.amount.toLocaleString()}</div>
+          <div className="text-sm">
+            Amount: ₨ {voucher.amount.toLocaleString()}
+          </div>
           <div className="flex gap-2 pt-2">
             <Button onClick={markPaid}>Mark Fee as Paid</Button>
-            <Button variant="outline" onClick={() => setVoucher(null)}>Edit Details</Button>
-            <Button variant="outline" onClick={() => printVoucher(voucher, fullName)}>Print Voucher</Button>
+            <Button variant="outline" onClick={() => setVoucher(null)}>
+              Edit Details
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => printVoucher(voucher, fullName)}
+            >
+              Print Voucher
+            </Button>
           </div>
         </div>
       )}

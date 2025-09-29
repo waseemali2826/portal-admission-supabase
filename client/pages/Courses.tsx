@@ -658,10 +658,17 @@ export default function CoursesAdmin() {
       .single();
 
     if (error) {
-      toast({ title: "Failed", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed",
+        description: error.message,
+        variant: "destructive",
+      });
     } else {
-      toast({ title: "Course added", description: `${inserted.name} added successfully` });
-      setCourses(prev => [inserted, ...prev]);
+      toast({
+        title: "Course added",
+        description: `${inserted.name} added successfully`,
+      });
+      setCourses((prev) => [inserted, ...prev]);
     }
   };
 
@@ -669,9 +676,11 @@ export default function CoursesAdmin() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Admin Courses Panel</h1>
       <CreateCourseForm onSubmit={handleAddCourse} />
-      {loading ? <p>Loading...</p> : (
+      {loading ? (
+        <p>Loading...</p>
+      ) : (
         <div className="space-y-4">
-          {courses.map(c => (
+          {courses.map((c) => (
             <Card key={c.id}>
               <CardHeader>
                 <CardTitle>{c.name}</CardTitle>
@@ -725,7 +734,9 @@ function CreateCourseForm({ onSubmit }: { onSubmit: (data: any) => void }) {
             <Textarea id="description" name="description" />
           </div>
           <div className="sm:col-span-2 flex justify-end gap-2">
-            <Button type="reset" variant="outline">Reset</Button>
+            <Button type="reset" variant="outline">
+              Reset
+            </Button>
             <Button type="submit">Create Course</Button>
           </div>
         </form>
