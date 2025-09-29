@@ -194,7 +194,34 @@ export function ApplicationsTab({
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                <Button size="sm" onClick={() => setOpenId(r.id)}>Review</Button>
+                <div className="flex justify-end gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setOpenId(r.id)}>Review</Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={async () => {
+                      if (!confirm(`Delete application ${r.id}? This cannot be undone.`)) return;
+                      const idNum = Number(r.id);
+                      try {
+                        const attempt1 = await supabase
+                          .from("applications")
+                          .delete()
+                          .eq("app_id", Number.isFinite(idNum) ? idNum : (r.id as any));
+                        if (attempt1.error) {
+                          await supabase
+                            .from("applications")
+                            .delete()
+                            .eq("id", Number.isFinite(idNum) ? idNum : (r.id as any));
+                        }
+                        toast({ title: "Deleted", description: `Application ${r.id} removed.` });
+                      } catch (e: any) {
+                        toast({ title: "Delete failed", description: e?.message || String(e) });
+                      }
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
