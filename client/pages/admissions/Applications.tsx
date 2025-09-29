@@ -163,6 +163,86 @@ export function ApplicationsTab({
     return rows;
   }, [data, query, filter]);
 
+  const trySupabaseDelete = async (targetId: string) => {
+    if (!supabase) return false;
+    const numeric = Number(targetId);
+    const values = Number.isFinite(numeric) ? [numeric, targetId] : [targetId];
+    const tables = ["applications", "public_applications"] as const;
+
+    for (const table of tables) {
+      for (const column of ["app_id", "id"] as const) {
+        for (const value of values) {
+          try {
+            const { data: removed, error } = await supabase
+              .from(table)
+              .delete()
+              .eq(column, value as any)
+              .select("id")
+              .limit(1);
+            if (!error && (removed?.length ?? 0) > 0) {
+              return true;
+            }
+          } catch (error) {
+            console.error(`Failed to delete from ${table}.${column}`, error);
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  const deleteViaApi = async (targetId: string) => {
+    try {
+      const response = await fetch("/api/public/applications/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: targetId }),
+      });
+      if (!response.ok) return false;
+      const payload = await response.json();
+      return Boolean(payload?.ok);
+    } catch (error) {
+      console.error("Failed to delete application via API", error);
+      return false;
+    }
+  };
+
+  const handleDelete = async (record: AdmissionRecord) => {
+    if (
+      !confirm(`Delete application ${record.id}? This cannot be undone.`)
+    ) {
+      return;
+    }
+
+    const targetId = record.id;
+    let deleted = false;
+
+    try {
+      deleted = await trySupabaseDelete(targetId);
+    } catch (error) {
+      console.error("Supabase deletion error", error);
+    }
+
+    if (!deleted) {
+      deleted = await deleteViaApi(targetId);
+    }
+
+    if (deleted) {
+      if (openId === targetId) setOpenId(null);
+      onDeleted?.(targetId);
+      toast({
+        title: "Deleted",
+        description: `Application ${targetId} removed.`,
+      });
+    } else {
+      toast({
+        title: "Delete failed",
+        description: "Unable to remove this application. Check permissions.",
+      });
+    }
+  };
+
   const record = data.find((r) => r.id === openId) || null;
 
   return (
