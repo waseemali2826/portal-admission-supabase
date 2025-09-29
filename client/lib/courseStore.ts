@@ -30,8 +30,7 @@ import { COURSES as PUBLIC_COURSES } from "@/data/courses";
 export function getAllCourseNames(): string[] {
   try {
     const fromStore = getStoredCourses().map((c) => c.name).filter(Boolean);
-    const fromPublic = (PUBLIC_COURSES as Array<{ name: string }>).map((c) => c.name).filter(Boolean);
-    return Array.from(new Set([...(fromPublic || []), ...fromStore]));
+    return Array.from(new Set(fromStore));
   } catch {
     return [];
   }
