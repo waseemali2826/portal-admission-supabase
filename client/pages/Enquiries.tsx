@@ -344,7 +344,7 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
             } else {
               // Save locally as well to keep offline copy (de-duped by id)
               addLocalEnquiry({
-                id: String(data.id),
+                id: String((Array.isArray(data) ? data[0]?.id : (data as any)?.id) ?? `ENQ-${Date.now()}`),
                 name: payload.name,
                 course: payload.course,
                 contact: payload.contact,
