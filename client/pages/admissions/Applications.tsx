@@ -132,6 +132,7 @@ export function ApplicationsTab({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"unpaid" | "paid">("unpaid");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -145,8 +146,9 @@ export function ApplicationsTab({
     );
     const isPaid = (r: AdmissionRecord) => paymentStatus(r) === "Paid";
     rows = rows.filter((r) => (filter === "paid" ? isPaid(r) : !isPaid(r)));
+    rows = rows.filter((r) => !removedIds.includes(r.id));
     return rows;
-  }, [data, query, filter]);
+  }, [data, query, filter, removedIds]);
 
   const record = data.find((r) => r.id === openId) || null;
 
@@ -203,17 +205,27 @@ export function ApplicationsTab({
                       if (!confirm(`Delete application ${r.id}? This cannot be undone.`)) return;
                       const idNum = Number(r.id);
                       try {
-                        const attempt1 = await supabase
+                        let ok = false;
+                        let res = await supabase
                           .from("applications")
                           .delete()
-                          .eq("app_id", Number.isFinite(idNum) ? idNum : (r.id as any));
-                        if (attempt1.error) {
-                          await supabase
+                          .eq("app_id", Number.isFinite(idNum) ? idNum : (r.id as any))
+                          .select();
+                        if (!res.error && (res.data?.length ?? 0) > 0) ok = true;
+                        if (!ok) {
+                          res = await supabase
                             .from("applications")
                             .delete()
-                            .eq("id", Number.isFinite(idNum) ? idNum : (r.id as any));
+                            .eq("id", Number.isFinite(idNum) ? idNum : (r.id as any))
+                            .select();
+                          if (!res.error && (res.data?.length ?? 0) > 0) ok = true;
                         }
-                        toast({ title: "Deleted", description: `Application ${r.id} removed.` });
+                        if (ok) {
+                          setRemovedIds((prev) => (prev.includes(r.id) ? prev : [...prev, r.id]));
+                          toast({ title: "Deleted", description: `Application ${r.id} removed.` });
+                        } else {
+                          toast({ title: "Delete failed", description: "No record removed. Check ID/permissions." });
+                        }
                       } catch (e: any) {
                         toast({ title: "Delete failed", description: e?.message || String(e) });
                       }
