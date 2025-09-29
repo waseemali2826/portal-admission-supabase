@@ -207,7 +207,10 @@ export default function Index() {
     const tokens = n.split(/[^a-z0-9]+/g).filter(Boolean);
     let best: { p: string; score: number } | null = null;
     for (const p of liveCourseNames) {
-      const ptokens = p.toLowerCase().split(/[^a-z0-9]+/g).filter(Boolean);
+      const ptokens = p
+        .toLowerCase()
+        .split(/[^a-z0-9]+/g)
+        .filter(Boolean);
       const set = new Set(ptokens);
       const overlap = tokens.filter((t) => set.has(t)).length;
       if (!best || overlap > best.score) best = { p, score: overlap };
