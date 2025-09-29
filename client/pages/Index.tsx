@@ -38,6 +38,7 @@ import { getStoredCourses, getAllCourseNames } from "@/lib/courseStore";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudents } from "@/lib/studentStore";
 import { studentsMock } from "./students/data";
+import { getLocalEnquiries } from "@/lib/enquiryStore";
 
 type Course = {
   name: string;
@@ -279,17 +280,78 @@ export default function Index() {
     }));
   }, [students, liveCourseNames]);
 
+  // Recent Enquiries: follow Enquiry Follow-Up sources (Supabase → API → Local), show last 5
   useEffect(() => {
-    (async () => {
+    let mounted = true;
+    const load = async () => {
+      let nextRows: any[] = [];
+      let nextCount = 0;
+
+      // Try Supabase first but only accept if non-empty
       try {
-        const { data, count } = await supabase
+        const { data, count, error } = await supabase
           .from("enquiries")
           .select("*", { count: "exact" })
           .order("created_at", { ascending: false })
           .limit(5);
-        setRecentEnquiries(data || []);
-        setEnquiriesCount(count || 0);
+        if (!error && Array.isArray(data) && data.length > 0) {
+          nextRows = data;
+          nextCount = count || data.length;
+        }
       } catch {}
+
+      // Fallback to API if still empty
+      if (nextRows.length === 0) {
+        try {
+          const r = await fetch("/api/public/enquiries");
+          if (r.ok) {
+            const { items } = await r.json();
+            const rows = Array.isArray(items) ? items : [];
+            if (rows.length > 0) {
+              nextRows = rows.slice(0, 5);
+              nextCount = rows.length;
+            }
+          }
+        } catch {}
+      }
+
+      // Fallback to local storage if still empty
+      if (nextRows.length === 0) {
+        try {
+          const rows = getLocalEnquiries();
+          if (rows.length > 0) {
+            nextRows = rows.slice(0, 5);
+            nextCount = rows.length;
+          }
+        } catch {}
+      }
+
+      // If all sources empty, keep 0; otherwise set best non-empty
+      if (mounted) {
+        setRecentEnquiries(nextRows);
+        setEnquiriesCount(nextCount);
+      }
+    };
+
+    load();
+    const onChange = () => load();
+    window.addEventListener("enquiries:changed", onChange as EventListener);
+    window.addEventListener("storage", onChange as EventListener);
+    const iv = setInterval(load, 5000);
+    return () => {
+      mounted = false;
+      window.removeEventListener(
+        "enquiries:changed",
+        onChange as EventListener,
+      );
+      window.removeEventListener("storage", onChange as EventListener);
+      clearInterval(iv);
+    };
+  }, []);
+
+  // Pending applications count
+  useEffect(() => {
+    (async () => {
       try {
         const { count } = await supabase
           .from("applications")

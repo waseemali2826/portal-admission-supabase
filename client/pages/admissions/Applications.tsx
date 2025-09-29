@@ -45,7 +45,7 @@
 //       <div className="flex flex-wrap items-center gap-2">
 //         <div className="text-sm font-medium">Admission Applications</div>
 //         <div className="ml-auto flex items-center gap-2">
-//           <Input className="max-w-xs" placeholder="Search name, course, campus…" value={query} onChange={(e) => setQuery(e.target.value)} />
+//           <Input className="max-w-xs" placeholder="Search name, course, campus���" value={query} onChange={(e) => setQuery(e.target.value)} />
 //         </div>
 //       </div>
 
@@ -133,6 +133,7 @@ import { useMemo, useState } from "react";
 import { paymentStatus } from "./types";
 import type { AdmissionRecord, AdmissionStatus } from "./types";
 import { Details } from "./Details";
+import { useAuth } from "@/contexts/auth";
 
 export function ApplicationsTab({
   data,
@@ -145,6 +146,8 @@ export function ApplicationsTab({
   const [filter, setFilter] = useState<"unpaid" | "paid">("unpaid");
   const [openId, setOpenId] = useState<string | null>(null);
   const [removedIds, setRemovedIds] = useState<string[]>([]);
+  const { can } = useAuth();
+  const canDelete = can("Admissions", "delete");
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -240,66 +243,68 @@ export function ApplicationsTab({
                   >
                     Review
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={async () => {
-                      if (
-                        !confirm(
-                          `Delete application ${r.id}? This cannot be undone.`,
-                        )
-                      )
-                        return;
-                      const idNum = Number(r.id);
-                      try {
-                        let ok = false;
-                        let res = await supabase
-                          .from("applications")
-                          .delete()
-                          .eq(
-                            "app_id",
-                            Number.isFinite(idNum) ? idNum : (r.id as any),
+                  {canDelete && (
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={async () => {
+                        if (
+                          !confirm(
+                            `Delete application ${r.id}? This cannot be undone.`,
                           )
-                          .select();
-                        if (!res.error && (res.data?.length ?? 0) > 0)
-                          ok = true;
-                        if (!ok) {
-                          res = await supabase
+                        )
+                          return;
+                        const idNum = Number(r.id);
+                        try {
+                          let ok = false;
+                          let res = await supabase
                             .from("applications")
                             .delete()
                             .eq(
-                              "id",
+                              "app_id",
                               Number.isFinite(idNum) ? idNum : (r.id as any),
                             )
                             .select();
                           if (!res.error && (res.data?.length ?? 0) > 0)
                             ok = true;
-                        }
-                        if (ok) {
-                          setRemovedIds((prev) =>
-                            prev.includes(r.id) ? prev : [...prev, r.id],
-                          );
-                          toast({
-                            title: "Deleted",
-                            description: `Application ${r.id} removed.`,
-                          });
-                        } else {
+                          if (!ok) {
+                            res = await supabase
+                              .from("applications")
+                              .delete()
+                              .eq(
+                                "id",
+                                Number.isFinite(idNum) ? idNum : (r.id as any),
+                              )
+                              .select();
+                            if (!res.error && (res.data?.length ?? 0) > 0)
+                              ok = true;
+                          }
+                          if (ok) {
+                            setRemovedIds((prev) =>
+                              prev.includes(r.id) ? prev : [...prev, r.id],
+                            );
+                            toast({
+                              title: "Deleted",
+                              description: `Application ${r.id} removed.`,
+                            });
+                          } else {
+                            toast({
+                              title: "Delete failed",
+                              description:
+                                "No record removed. Check ID/permissions.",
+                            });
+                          }
+                        } catch (e: any) {
                           toast({
                             title: "Delete failed",
-                            description:
-                              "No record removed. Check ID/permissions.",
+                            description: e?.message || String(e),
                           });
                         }
-                      } catch (e: any) {
-                        toast({
-                          title: "Delete failed",
-                          description: e?.message || String(e),
-                        });
-                      }
-                    }}
-                  >
-                    Delete
-                  </Button>
+                      }}
+                    >
+                      Delete
+                    </Button>
+                  )}
                 </div>
               </TableCell>
             </TableRow>

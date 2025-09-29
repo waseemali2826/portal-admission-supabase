@@ -727,6 +727,21 @@ function FollowTable({ data }: { data: Enquiry[] }) {
     const q = encodeURIComponent(text);
     return `https://wa.me/${num}?text=${q}`;
   };
+
+  // Show only the latest 5 enquiries (by created timestamp/id/nextFollow)
+  const ts = (e: Enquiry) => {
+    const idNum = Number(String(e.id).split("-").pop());
+    const created = (e as any).created_at || (e as any).createdAt;
+    const next = e.nextFollow ? Date.parse(e.nextFollow) : 0;
+    return (
+      (Number.isFinite(idNum) ? (idNum as number) : 0) ||
+      (created ? Date.parse(created) : 0) ||
+      next ||
+      0
+    );
+  };
+  const viewData = [...data].sort((a, b) => ts(b) - ts(a)).slice(0, 5);
+
   return (
     <Card>
       <CardHeader>
@@ -747,7 +762,7 @@ function FollowTable({ data }: { data: Enquiry[] }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data.map((e) => (
+              {viewData.map((e) => (
                 <TableRow key={e.id}>
                   <TableCell className="font-medium">
                     {e.name}{" "}
