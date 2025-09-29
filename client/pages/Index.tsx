@@ -284,45 +284,55 @@ export default function Index() {
   useEffect(() => {
     let mounted = true;
     const load = async () => {
-      let got = false;
+      let nextRows: any[] = [];
+      let nextCount = 0;
+
+      // Try Supabase first but only accept if non-empty
       try {
         const { data, count, error } = await supabase
           .from("enquiries")
           .select("*", { count: "exact" })
           .order("created_at", { ascending: false })
           .limit(5);
-        if (!error && Array.isArray(data)) {
-          if (mounted) {
-            setRecentEnquiries(data);
-            setEnquiriesCount(count || data.length || 0);
-          }
-          got = data.length > 0;
+        if (!error && Array.isArray(data) && data.length > 0) {
+          nextRows = data;
+          nextCount = count || data.length;
         }
       } catch {}
-      if (!got) {
+
+      // Fallback to API if still empty
+      if (nextRows.length === 0) {
         try {
           const r = await fetch("/api/public/enquiries");
           if (r.ok) {
             const { items } = await r.json();
             const rows = Array.isArray(items) ? items : [];
-            if (mounted) {
-              setRecentEnquiries(rows.slice(0, 5));
-              setEnquiriesCount(rows.length);
+            if (rows.length > 0) {
+              nextRows = rows.slice(0, 5);
+              nextCount = rows.length;
             }
-            got = rows.length > 0;
           }
         } catch {}
       }
-      if (!got) {
+
+      // Fallback to local storage if still empty
+      if (nextRows.length === 0) {
         try {
           const rows = getLocalEnquiries();
-          if (mounted) {
-            setRecentEnquiries(rows.slice(0, 5));
-            setEnquiriesCount(rows.length);
+          if (rows.length > 0) {
+            nextRows = rows.slice(0, 5);
+            nextCount = rows.length;
           }
         } catch {}
       }
+
+      // If all sources empty, keep 0; otherwise set best non-empty
+      if (mounted) {
+        setRecentEnquiries(nextRows);
+        setEnquiriesCount(nextCount);
+      }
     };
+
     load();
     const onChange = () => load();
     window.addEventListener("enquiries:changed", onChange as EventListener);
