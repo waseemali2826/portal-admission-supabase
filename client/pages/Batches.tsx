@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,13 +59,8 @@ function statusFromDates(start: string, end: string, frozen?: boolean): BatchSta
 }
 
 export default function Batches() {
-  const [batches, setBatches] = useState<BatchItem[]>([
-    { id: "b-1", course: COURSES[0], code: "FSWD-MAIN-001", campus: CAMPUSES[0], startDate: today(), endDate: new Date(new Date().setMonth(new Date().getMonth()+6)).toISOString().slice(0,10), instructor: INSTRUCTORS[0], maxStudents: 30, currentStudents: 18 },
-  ]);
-  const [slots, setSlots] = useState<TimeSlot[]>([
-    { id: "t-1", batchId: "b-1", day: "Mon", startTime: "10:00", endTime: "12:00", room: "Lab-1", faculty: INSTRUCTORS[0] },
-    { id: "t-2", batchId: "b-1", day: "Wed", startTime: "10:00", endTime: "12:00", room: "Lab-1", faculty: INSTRUCTORS[0] },
-  ]);
+  const [batches, setBatches] = useState<BatchItem[]>([]);
+  const [slots, setSlots] = useState<TimeSlot[]>([]);
 
   // Create form defaults
   const [cCourse, setCCourse] = useState("");
