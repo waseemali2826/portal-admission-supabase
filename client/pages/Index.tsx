@@ -340,7 +340,10 @@ export default function Index() {
     const iv = setInterval(load, 5000);
     return () => {
       mounted = false;
-      window.removeEventListener("enquiries:changed", onChange as EventListener);
+      window.removeEventListener(
+        "enquiries:changed",
+        onChange as EventListener,
+      );
       window.removeEventListener("storage", onChange as EventListener);
       clearInterval(iv);
     };
