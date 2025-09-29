@@ -211,7 +211,9 @@ export default function Enquiries() {
         </div>
       </div>
 
-      {view === "Create New Enquiry" && <CreateEnquiry />}
+      {view === "Create New Enquiry" && (
+        <CreateEnquiry onCreated={(row) => setServerPub((prev) => (row ? [row, ...prev] : prev))} />
+      )}
       {view === "Import Bulk Enquiries" && <ImportBulk />}
       {view === "Enquiry Follow-Up" && (
         <FollowUp enquiries={filtered} todays={todays} />
@@ -221,7 +223,7 @@ export default function Enquiries() {
   );
 }
 
-function CreateEnquiry() {
+function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
   const [probability, setProbability] = useState<number[]>([50]);
   const [sources, setSources] = useState<string[]>([]);
   const [version, setVersion] = useState(0);
@@ -295,7 +297,7 @@ function CreateEnquiry() {
             form.reset();
             setSources([]);
             setProbability([50]);
-            setServerPub((prev) => (data ? [data, ...prev] : prev));
+            onCreated(data);
           }}
         >
           <div className="space-y-1.5">
