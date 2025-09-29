@@ -209,9 +209,7 @@ export function ApplicationsTab({
   };
 
   const handleDelete = async (record: AdmissionRecord) => {
-    if (
-      !confirm(`Delete application ${record.id}? This cannot be undone.`)
-    ) {
+    if (!confirm(`Delete application ${record.id}? This cannot be undone.`)) {
       return;
     }
 

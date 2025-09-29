@@ -106,7 +106,11 @@ export default function Admissions() {
         if (!error && Array.isArray(data)) {
           for (const entry of data) {
             const rawId =
-              entry.app_id ?? entry.id ?? entry.appId ?? entry.appID ?? entry.uuid;
+              entry.app_id ??
+              entry.id ??
+              entry.appId ??
+              entry.appID ??
+              entry.uuid;
             if (!rawId) continue;
             const id = String(rawId);
             const created =
@@ -124,8 +128,11 @@ export default function Admissions() {
                     {
                       id: "due",
                       amount: Number(entry.fee_total ?? 0) || 0,
-                      dueDate: entry.next_due_date ??
-                        new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+                      dueDate:
+                        entry.next_due_date ??
+                        new Date(
+                          Date.now() + 7 * 24 * 60 * 60 * 1000,
+                        ).toISOString(),
                     },
                   ];
             const documents = Array.isArray(entry.documents)
@@ -285,7 +292,11 @@ export default function Admissions() {
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
         <TabsContent value="applications">
-          <ApplicationsTab data={items} onUpdate={upsert} onDeleted={handleDeleted} />
+          <ApplicationsTab
+            data={items}
+            onUpdate={upsert}
+            onDeleted={handleDeleted}
+          />
         </TabsContent>
         <TabsContent value="reports">
           <ReportsTab data={items} />
