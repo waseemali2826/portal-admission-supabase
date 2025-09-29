@@ -37,12 +37,25 @@ export function addLocalEnquiry(input: Omit<EnquiryLocal, "id" | "created_at"> &
     created_at: new Date().toISOString(),
     ...input,
   } as EnquiryLocal;
-  // de-duplicate by id
   const idx = list.findIndex((e) => e.id === rec.id);
   const next = idx >= 0 ? [...list.slice(0, idx), rec, ...list.slice(idx + 1)] : [rec, ...list];
   localStorage.setItem(KEY, JSON.stringify(next));
   try {
     window.dispatchEvent(new CustomEvent("enquiries:changed", { detail: { type: idx >= 0 ? "upsert" : "add", enquiry: rec } }));
+  } catch {}
+  return rec;
+}
+
+export function updateLocalEnquiry(id: string, patch: Partial<EnquiryLocal>): EnquiryLocal | null {
+  const list = getLocalEnquiries();
+  const idx = list.findIndex((e) => e.id === id);
+  if (idx < 0) return null;
+  const rec: EnquiryLocal = { ...list[idx], ...patch } as EnquiryLocal;
+  const next = [...list];
+  next[idx] = rec;
+  localStorage.setItem(KEY, JSON.stringify(next));
+  try {
+    window.dispatchEvent(new CustomEvent("enquiries:changed", { detail: { type: "upsert", enquiry: rec } }));
   } catch {}
   return rec;
 }
