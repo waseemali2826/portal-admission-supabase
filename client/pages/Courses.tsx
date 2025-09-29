@@ -600,6 +600,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
+import { mergeSupabaseCourses } from "@/lib/courseStore";
 
 // Full course type
 type Course = {
@@ -630,7 +631,20 @@ export default function CoursesAdmin() {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) console.error(error);
-    else setCourses(data || []);
+    else {
+      setCourses(data || []);
+      try {
+        mergeSupabaseCourses(
+          (data || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            duration: c.duration,
+            fees: Number(c.fees) || 0,
+            description: c.description || "",
+          })),
+        );
+      } catch {}
+    }
     setLoading(false);
   };
 
@@ -669,6 +683,17 @@ export default function CoursesAdmin() {
         description: `${inserted.name} added successfully`,
       });
       setCourses((prev) => [inserted, ...prev]);
+      try {
+        mergeSupabaseCourses([
+          {
+            id: inserted.id,
+            name: inserted.name,
+            duration: inserted.duration,
+            fees: Number(inserted.fees) || 0,
+            description: inserted.description || "",
+          },
+        ]);
+      } catch {}
     }
   };
 
