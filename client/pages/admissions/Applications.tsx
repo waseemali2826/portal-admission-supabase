@@ -133,6 +133,7 @@ import { useMemo, useState } from "react";
 import { paymentStatus } from "./types";
 import type { AdmissionRecord, AdmissionStatus } from "./types";
 import { Details } from "./Details";
+import { useAuth } from "@/contexts/auth";
 
 export function ApplicationsTab({
   data,
@@ -145,6 +146,8 @@ export function ApplicationsTab({
   const [filter, setFilter] = useState<"unpaid" | "paid">("unpaid");
   const [openId, setOpenId] = useState<string | null>(null);
   const [removedIds, setRemovedIds] = useState<string[]>([]);
+  const { can } = useAuth();
+  const canDelete = can("Admissions", "delete");
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
