@@ -14,6 +14,7 @@ import {
   listPublicEnquiries,
   postPublicApplication,
   listPublicApplications,
+  deletePublicApplication,
 } from "./routes/public-submissions";
 import { getSupabase } from "./lib/supabase";
 
