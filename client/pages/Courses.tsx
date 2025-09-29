@@ -626,7 +626,7 @@ export default function CoursesAdmin() {
   const fetchCourses = async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from<Course, NewCourse>("courses")
+      .from("courses")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) console.error(error);
@@ -652,7 +652,7 @@ export default function CoursesAdmin() {
     };
 
     const { data: inserted, error } = await supabase
-      .from<Course, NewCourse>("courses")
+      .from("courses")
       .insert([newCourse])
       .select()
       .single();
