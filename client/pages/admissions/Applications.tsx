@@ -323,59 +323,8 @@ export function ApplicationsTab({
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={async () => {
-                      if (
-                        !confirm(
-                          `Delete application ${r.id}? This cannot be undone.`,
-                        )
-                      )
-                        return;
-                      const idNum = Number(r.id);
-                      try {
-                        let ok = false;
-                        let res = await supabase
-                          .from("applications")
-                          .delete()
-                          .eq(
-                            "app_id",
-                            Number.isFinite(idNum) ? idNum : (r.id as any),
-                          )
-                          .select();
-                        if (!res.error && (res.data?.length ?? 0) > 0)
-                          ok = true;
-                        if (!ok) {
-                          res = await supabase
-                            .from("applications")
-                            .delete()
-                            .eq(
-                              "id",
-                              Number.isFinite(idNum) ? idNum : (r.id as any),
-                            )
-                            .select();
-                          if (!res.error && (res.data?.length ?? 0) > 0)
-                            ok = true;
-                        }
-                        if (ok) {
-                          setRemovedIds((prev) =>
-                            prev.includes(r.id) ? prev : [...prev, r.id],
-                          );
-                          toast({
-                            title: "Deleted",
-                            description: `Application ${r.id} removed.`,
-                          });
-                        } else {
-                          toast({
-                            title: "Delete failed",
-                            description:
-                              "No record removed. Check ID/permissions.",
-                          });
-                        }
-                      } catch (e: any) {
-                        toast({
-                          title: "Delete failed",
-                          description: e?.message || String(e),
-                        });
-                      }
+                    onClick={() => {
+                      void handleDelete(r);
                     }}
                   >
                     Delete
