@@ -37,6 +37,7 @@ import {
 import { getStoredCourses, getAllCourseNames } from "@/lib/courseStore";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudents } from "@/lib/studentStore";
+import { getLocalEnquiries } from "@/lib/enquiryStore";
 import { studentsMock } from "./students/data";
 
 type Course = {
@@ -280,16 +281,32 @@ export default function Index() {
   }, [students, liveCourseNames]);
 
   useEffect(() => {
-    (async () => {
+    const loadEnquiries = async () => {
+      let supaList: any[] = [];
+      let supaCount: number | null = null;
       try {
         const { data, count } = await supabase
           .from("enquiries")
           .select("*", { count: "exact" })
           .order("created_at", { ascending: false })
           .limit(5);
-        setRecentEnquiries(data || []);
-        setEnquiriesCount(count || 0);
+        supaList = Array.isArray(data) ? data : [];
+        supaCount = typeof count === "number" ? count : null;
       } catch {}
+      let localList: any[] = [];
+      try {
+        localList = getLocalEnquiries();
+      } catch {}
+      const merged = [...supaList, ...localList]
+        .sort(
+          (a, b) =>
+            new Date(b.created_at || b.createdAt || 0).getTime() -
+            new Date(a.created_at || a.createdAt || 0).getTime(),
+        )
+        .slice(0, 5);
+      setRecentEnquiries(merged);
+      setEnquiriesCount(supaCount ?? localList.length);
+
       try {
         const { count } = await supabase
           .from("applications")
@@ -297,7 +314,40 @@ export default function Index() {
           .eq("status", "Pending");
         setApplicationsPendingCount(count || 0);
       } catch {}
-    })();
+    };
+
+    loadEnquiries();
+
+    try {
+      const ch = (supabase as any)?.channel?.("enquiries-dash");
+      if (ch && ch.on && ch.subscribe) {
+        ch.on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "enquiries" },
+          () => {
+            loadEnquiries();
+          },
+        ).subscribe();
+        const off = () => {
+          try {
+            ch.unsubscribe();
+          } catch {}
+        };
+        window.addEventListener("beforeunload", off);
+        return () => {
+          window.removeEventListener("beforeunload", off);
+          off();
+        };
+      }
+    } catch {}
+
+    const onLocal = () => loadEnquiries();
+    window.addEventListener("enquiries:changed", onLocal as any);
+    window.addEventListener("storage", onLocal);
+    return () => {
+      window.removeEventListener("enquiries:changed", onLocal as any);
+      window.removeEventListener("storage", onLocal);
+    };
   }, []);
 
   return (

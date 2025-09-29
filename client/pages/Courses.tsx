@@ -600,6 +600,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
+import { mergeSupabaseCourses } from "@/lib/courseStore";
 
 // Full course type
 type Course = {
@@ -621,6 +622,7 @@ type NewCourse = Omit<Course, "id" | "created_at">;
 export default function CoursesAdmin() {
   const [courses, setCourses] = useState<Course[]>([]);
   const [loading, setLoading] = useState(false);
+  const [editing, setEditing] = useState<string | null>(null);
 
   // Fetch courses from Supabase
   const fetchCourses = async () => {
@@ -630,7 +632,20 @@ export default function CoursesAdmin() {
       .select("*")
       .order("created_at", { ascending: false });
     if (error) console.error(error);
-    else setCourses(data || []);
+    else {
+      setCourses(data || []);
+      try {
+        mergeSupabaseCourses(
+          (data || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            duration: c.duration,
+            fees: Number(c.fees) || 0,
+            description: c.description || "",
+          })),
+        );
+      } catch {}
+    }
     setLoading(false);
   };
 
@@ -669,7 +684,87 @@ export default function CoursesAdmin() {
         description: `${inserted.name} added successfully`,
       });
       setCourses((prev) => [inserted, ...prev]);
+      try {
+        mergeSupabaseCourses([
+          {
+            id: inserted.id,
+            name: inserted.name,
+            duration: inserted.duration,
+            fees: Number(inserted.fees) || 0,
+            description: inserted.description || "",
+          },
+        ]);
+      } catch {}
     }
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    if (!confirm("Delete this course?")) return;
+    const { error } = await supabase.from("courses").delete().eq("id", id);
+    if (error) {
+      toast({
+        title: "Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({ title: "Deleted", description: "Course removed" });
+    setCourses((prev) => {
+      const next = prev.filter((c) => c.id !== id);
+      try {
+        mergeSupabaseCourses(
+          next.map((c) => ({
+            id: c.id,
+            name: c.name,
+            duration: c.duration,
+            fees: Number(c.fees) || 0,
+            description: c.description || "",
+          })),
+        );
+      } catch {}
+      return next;
+    });
+  };
+
+  const handleUpdateCourse = async (id: string, data: any) => {
+    const patch = {
+      name: String(data.name || "").trim(),
+      duration: String(data.duration || "").trim(),
+      fees: Number(data.fees || 0),
+      description: String(data.description || ""),
+    };
+    const { data: updated, error } = await supabase
+      .from("courses")
+      .update(patch)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) {
+      toast({
+        title: "Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+      return;
+    }
+    toast({ title: "Updated", description: `${updated.name}` });
+    setCourses((prev) => {
+      const next = prev.map((c) => (c.id === id ? { ...c, ...updated } : c));
+      try {
+        mergeSupabaseCourses(
+          next.map((c) => ({
+            id: c.id,
+            name: c.name,
+            duration: c.duration,
+            fees: Number(c.fees) || 0,
+            description: c.description || "",
+          })),
+        );
+      } catch {}
+      return next;
+    });
+    setEditing(null);
   };
 
   return (
@@ -686,10 +781,90 @@ export default function CoursesAdmin() {
                 <CardTitle>{c.name}</CardTitle>
               </CardHeader>
               <CardContent>
-                <p>Category: {c.category}</p>
-                <p>Duration: {c.duration}</p>
-                <p>Fees: ₨ {c.fees.toLocaleString()}</p>
-                <p>{c.description}</p>
+                {editing === c.id ? (
+                  <form
+                    className="grid gap-3 sm:grid-cols-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      const form = e.target as HTMLFormElement;
+                      const data = Object.fromEntries(
+                        new FormData(form).entries(),
+                      );
+                      handleUpdateCourse(c.id, data);
+                    }}
+                  >
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`name-${c.id}`}>Course Name</Label>
+                      <Input
+                        id={`name-${c.id}`}
+                        name="name"
+                        defaultValue={c.name}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`duration-${c.id}`}>Duration</Label>
+                      <Input
+                        id={`duration-${c.id}`}
+                        name="duration"
+                        defaultValue={c.duration}
+                        required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor={`fees-${c.id}`}>Fees</Label>
+                      <Input
+                        id={`fees-${c.id}`}
+                        name="fees"
+                        type="number"
+                        min={0}
+                        defaultValue={c.fees}
+                        required
+                      />
+                    </div>
+                    <div className="sm:col-span-2 space-y-1.5">
+                      <Label htmlFor={`description-${c.id}`}>Description</Label>
+                      <Textarea
+                        id={`description-${c.id}`}
+                        name="description"
+                        defaultValue={c.description || ""}
+                      />
+                    </div>
+                    <div className="sm:col-span-2 flex justify-end gap-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditing(null)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit">Save</Button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="space-y-2">
+                    <p>Category: {c.category}</p>
+                    <p>Duration: {c.duration}</p>
+                    <p>Fees: ₨ {c.fees.toLocaleString()}</p>
+                    <p>{c.description}</p>
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditing(c.id)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteCourse(c.id)}
+                      >
+                        Delete
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}

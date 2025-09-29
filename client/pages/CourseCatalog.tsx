@@ -43,6 +43,7 @@ import { supabase } from "@/lib/supabaseClient";
 import { Card, CardHeader, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
+import { mergeSupabaseCourses } from "@/lib/courseStore";
 
 type Course = {
   id: string;
@@ -67,8 +68,14 @@ export default function CourseCatalog() {
     else {
       setCourses(data);
       try {
-        window.dispatchEvent(
-          new CustomEvent("courses:changed", { detail: { type: "fetch" } }),
+        mergeSupabaseCourses(
+          (data || []).map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            duration: c.duration,
+            fees: Number(c.fees) || 0,
+            description: c.description || "",
+          })),
         );
       } catch {}
     }
