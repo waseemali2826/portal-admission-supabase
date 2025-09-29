@@ -50,7 +50,13 @@ import {
   UserPlus,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import {
+  getLocalEnquiries,
+  addLocalEnquiry,
+  updateLocalEnquiry,
+} from "@/lib/enquiryStore";
 import { getAllCourseNames } from "@/lib/courseStore";
+import { useNavigate } from "react-router-dom";
 
 const COUNTRIES = ["Pakistan", "India", "UAE"] as const;
 const CITIES = ["Faisalabad", "Lahore", "Islamabad"] as const;
@@ -103,6 +109,7 @@ export default function Enquiries() {
   >("All");
 
   const [serverPub, setServerPub] = useState<any[]>([]);
+  const [localPub, setLocalPub] = useState<any[]>([]);
   useEffect(() => {
     (async () => {
       try {
@@ -115,6 +122,18 @@ export default function Enquiries() {
         // ignore
       }
     })();
+    const loadLocal = () => setLocalPub(getLocalEnquiries());
+    loadLocal();
+    const onChange = () => loadLocal();
+    window.addEventListener("enquiries:changed", onChange as EventListener);
+    window.addEventListener("storage", onChange as EventListener);
+    return () => {
+      window.removeEventListener(
+        "enquiries:changed",
+        onChange as EventListener,
+      );
+      window.removeEventListener("storage", onChange as EventListener);
+    };
   }, []);
 
   const filtered = useMemo(() => {
@@ -141,7 +160,31 @@ export default function Enquiries() {
       }),
     );
 
-    const merged: Enquiry[] = fromSupabase;
+    const fromLocal = localPub.map(
+      (p: any): Enquiry => ({
+        id: String(
+          p.id ??
+            p.enquiry_id ??
+            p.created_at ??
+            crypto.randomUUID?.() ??
+            Date.now(),
+        ),
+        name: p.name,
+        course: p.course,
+        contact: p.contact ?? p.phone,
+        email: p.email ?? undefined,
+        city: p.city ?? "Lahore",
+        source:
+          p.source ?? (Array.isArray(p.sources) ? p.sources[0] : "Website"),
+        nextFollow: p.next_follow ?? p.preferred_start ?? undefined,
+        stage: p.stage ?? "Prospective",
+        status: p.status ?? "Pending",
+      }),
+    );
+
+    const mergedMap = new Map<string, Enquiry>();
+    [...fromSupabase, ...fromLocal].forEach((e) => mergedMap.set(e.id, e));
+    const merged: Enquiry[] = Array.from(mergedMap.values());
     return merged.filter(
       (e) =>
         (stageFilter === "All" || e.stage === stageFilter) &&
@@ -211,7 +254,13 @@ export default function Enquiries() {
         </div>
       </div>
 
-      {view === "Create New Enquiry" && <CreateEnquiry />}
+      {view === "Create New Enquiry" && (
+        <CreateEnquiry
+          onCreated={(row) =>
+            setServerPub((prev) => (row ? [row, ...prev] : prev))
+          }
+        />
+      )}
       {view === "Import Bulk Enquiries" && <ImportBulk />}
       {view === "Enquiry Follow-Up" && (
         <FollowUp enquiries={filtered} todays={todays} />
@@ -221,18 +270,35 @@ export default function Enquiries() {
   );
 }
 
-function CreateEnquiry() {
+function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
   const [probability, setProbability] = useState<number[]>([50]);
   const [sources, setSources] = useState<string[]>([]);
-  const [version, setVersion] = useState(0);
-  const courses = useMemo(() => getAllCourseNames(), [version]);
+  const [courses, setCourses] = useState<string[]>([]);
   useEffect(() => {
-    const bump = () => setVersion((v) => v + 1);
-    window.addEventListener("courses:changed", bump);
-    window.addEventListener("storage", bump);
+    const load = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("courses")
+          .select("name,status,created_at")
+          .eq("status", "live")
+          .order("created_at", { ascending: false });
+        if (!error && data) {
+          const names = data
+            .map((d: any) => String(d.name || ""))
+            .filter(Boolean);
+          setCourses(Array.from(new Set(names)));
+          return;
+        }
+      } catch {}
+      setCourses(getAllCourseNames());
+    };
+    load();
+    const refresh = () => load();
+    window.addEventListener("courses:changed", refresh as EventListener);
+    window.addEventListener("storage", refresh as EventListener);
     return () => {
-      window.removeEventListener("courses:changed", bump);
-      window.removeEventListener("storage", bump);
+      window.removeEventListener("courses:changed", refresh as EventListener);
+      window.removeEventListener("storage", refresh as EventListener);
     };
   }, []);
 
@@ -280,22 +346,67 @@ function CreateEnquiry() {
             const { data, error } = await supabase
               .from("enquiries")
               .insert([payload])
-              .select()
-              .single();
+              .select();
 
             if (error) {
-              toast({ title: "Failed to save", description: error.message });
-              return;
+              // Save locally even if server fails
+              addLocalEnquiry({
+                name: payload.name,
+                course: payload.course,
+                contact: payload.contact,
+                email: payload.email,
+                gender: payload.gender,
+                country: payload.country,
+                city: payload.city,
+                area: payload.area,
+                campus: payload.campus,
+                next_follow: payload.next_follow,
+                probability: payload.probability,
+                sources: payload.sources,
+                source: payload.source,
+                remarks: payload.remarks,
+                stage: payload.stage,
+                status: payload.status,
+              });
+              console.warn("Enquiry save failed; stored locally", error);
+              toast({
+                title: "Saved locally",
+                description:
+                  "Server unreachable or blocked. Enquiry saved on this device.",
+              });
+            } else {
+              // Save locally as well to keep offline copy (de-duped by id)
+              addLocalEnquiry({
+                id: String(
+                  (Array.isArray(data) ? data[0]?.id : (data as any)?.id) ??
+                    `ENQ-${Date.now()}`,
+                ),
+                name: payload.name,
+                course: payload.course,
+                contact: payload.contact,
+                email: payload.email,
+                gender: payload.gender,
+                country: payload.country,
+                city: payload.city,
+                area: payload.area,
+                campus: payload.campus,
+                next_follow: payload.next_follow,
+                probability: payload.probability,
+                sources: payload.sources,
+                source: payload.source,
+                remarks: payload.remarks,
+                stage: payload.stage,
+                status: payload.status,
+              });
+              toast({
+                title: "Enquiry created",
+                description: `${payload.name} (${payload.course}) saved.`,
+              });
+              onCreated(Array.isArray(data) ? data[0] : data);
             }
-
-            toast({
-              title: "Enquiry created",
-              description: `${payload.name} (${payload.course}) saved.`,
-            });
             form.reset();
             setSources([]);
             setProbability([50]);
-            setServerPub((prev) => (data ? [data, ...prev] : prev));
           }}
         >
           <div className="space-y-1.5">
@@ -606,6 +717,16 @@ function FollowUp({
 }
 
 function FollowTable({ data }: { data: Enquiry[] }) {
+  const navigate = useNavigate();
+  const phoneLink = (p: string) =>
+    `tel:${String(p || "").replace(/[^\d+]/g, "")}`;
+  const smsLink = (p: string) =>
+    `sms:${String(p || "").replace(/[^\d+]/g, "")}`;
+  const waLink = (p: string, text: string) => {
+    const num = String(p || "").replace(/[^\d]/g, "");
+    const q = encodeURIComponent(text);
+    return `https://wa.me/${num}?text=${q}`;
+  };
   return (
     <Card>
       <CardHeader>
@@ -649,25 +770,36 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                       <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuLabel>Contact</DropdownMenuLabel>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `Calling ${e.contact}` })
-                          }
+                          onClick={() => {
+                            try {
+                              window.open(phoneLink(e.contact), "_blank");
+                            } catch {}
+                            toast({ title: `Calling ${e.contact}` });
+                          }}
                         >
                           <Phone className="h-4 w-4 mr-2" />
                           Voice Call
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `SMS to ${e.contact}` })
-                          }
+                          onClick={() => {
+                            try {
+                              window.open(smsLink(e.contact), "_blank");
+                            } catch {}
+                            toast({ title: `SMS to ${e.contact}` });
+                          }}
                         >
                           <MessageSquare className="h-4 w-4 mr-2" />
                           Text Message
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `Email to ${e.email || "N/A"}` })
-                          }
+                          onClick={() => {
+                            if (e.email) {
+                              try {
+                                window.open(`mailto:${e.email}`);
+                              } catch {}
+                            }
+                            toast({ title: `Email to ${e.email || "N/A"}` });
+                          }}
                         >
                           <Mail className="h-4 w-4 mr-2" />
                           Email
@@ -679,23 +811,42 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                           Live Chat
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `WhatsApp to ${e.contact}` })
-                          }
+                          onClick={() => {
+                            try {
+                              window.open(
+                                waLink(
+                                  e.contact,
+                                  `Assalam o Alaikum ${e.name}, this is regarding your enquiry for ${e.course}.`,
+                                ),
+                                "_blank",
+                              );
+                            } catch {}
+                            toast({ title: `WhatsApp to ${e.contact}` });
+                          }}
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           WhatsApp
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => toast({ title: `Walk-In scheduled` })}
+                          onClick={() => {
+                            updateLocalEnquiry(e.id, {
+                              next_follow: new Date().toISOString(),
+                            } as any);
+                            toast({ title: `Walk-In scheduled` });
+                          }}
                         >
                           <Footprints className="h-4 w-4 mr-2" />
                           Walk-In
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `Transferred enquiry ${e.id}` })
-                          }
+                          onClick={() => {
+                            const to = prompt("Transfer to (name/desk)?") || "";
+                            if (to)
+                              updateLocalEnquiry(e.id, {
+                                remarks: `Transferred to ${to}`,
+                              } as any);
+                            toast({ title: `Transferred enquiry ${e.id}` });
+                          }}
                         >
                           <ArrowRightLeft className="h-4 w-4 mr-2" />
                           Transfer Enquiry
@@ -703,12 +854,13 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Outcome</DropdownMenuLabel>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({
-                              title: `Enroll Now`,
-                              description: `Open admission form for ${e.name}`,
-                            })
-                          }
+                          onClick={() => {
+                            updateLocalEnquiry(e.id, {
+                              status: "Enrolled",
+                            } as any);
+                            const url = `/admission-form?course=${encodeURIComponent(e.course)}&name=${encodeURIComponent(e.name)}&phone=${encodeURIComponent(e.contact)}&email=${encodeURIComponent(e.email || "")}`;
+                            navigate(url);
+                          }}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Enroll Now
@@ -717,6 +869,10 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                           onClick={() => {
                             const reason =
                               prompt("Reason for not interested?") || "";
+                            updateLocalEnquiry(e.id, {
+                              status: "Not Interested",
+                              remarks: reason,
+                            } as any);
                             toast({
                               title: `Marked Not Interested`,
                               description: reason || "No reason specified",
@@ -786,7 +942,7 @@ function StatusTracking({ enquiries }: { enquiries: Enquiry[] }) {
                     <TableCell>{e.stage}</TableCell>
                     <TableCell>{e.source}</TableCell>
                     <TableCell className="text-right">
-                      {e.nextFollow?.replace("T", " ") || "—"}
+                      {e.nextFollow?.replace("T", " ") || "���"}
                     </TableCell>
                   </TableRow>
                 ))}

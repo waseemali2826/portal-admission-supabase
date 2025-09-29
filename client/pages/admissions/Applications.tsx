@@ -113,8 +113,22 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabaseClient";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { useMemo, useState } from "react";
 import { paymentStatus } from "./types";
 import type { AdmissionRecord, AdmissionStatus } from "./types";
@@ -130,21 +144,24 @@ export function ApplicationsTab({
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"unpaid" | "paid">("unpaid");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [removedIds, setRemovedIds] = useState<string[]>([]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
-    let rows = data.filter((r) =>
-      !q ||
-      r.student.name.toLowerCase().includes(q) ||
-      r.student.email.toLowerCase().includes(q) ||
-      r.course.toLowerCase().includes(q) ||
-      r.batch.toLowerCase().includes(q) ||
-      r.campus.toLowerCase().includes(q),
+    let rows = data.filter(
+      (r) =>
+        !q ||
+        r.student.name.toLowerCase().includes(q) ||
+        r.student.email.toLowerCase().includes(q) ||
+        r.course.toLowerCase().includes(q) ||
+        r.batch.toLowerCase().includes(q) ||
+        r.campus.toLowerCase().includes(q),
     );
     const isPaid = (r: AdmissionRecord) => paymentStatus(r) === "Paid";
     rows = rows.filter((r) => (filter === "paid" ? isPaid(r) : !isPaid(r)));
+    rows = rows.filter((r) => !removedIds.includes(r.id));
     return rows;
-  }, [data, query, filter]);
+  }, [data, query, filter, removedIds]);
 
   const record = data.find((r) => r.id === openId) || null;
 
@@ -153,13 +170,30 @@ export function ApplicationsTab({
       <div className="flex flex-wrap items-center gap-2">
         <div className="text-sm font-medium">Admission Applications</div>
         <div className="ml-auto flex items-center gap-2">
-          <Input className="max-w-xs" placeholder="Search name, course, campus…" value={query} onChange={(e) => setQuery(e.target.value)} />
+          <Input
+            className="max-w-xs"
+            placeholder="Search name, course, campus…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
         </div>
       </div>
 
       <div className="flex gap-2">
-        <Button variant={filter === "unpaid" ? "default" : "outline"} size="sm" onClick={() => setFilter("unpaid")}>Unpaid</Button>
-        <Button variant={filter === "paid" ? "default" : "outline"} size="sm" onClick={() => setFilter("paid")}>Paid</Button>
+        <Button
+          variant={filter === "unpaid" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("unpaid")}
+        >
+          Unpaid
+        </Button>
+        <Button
+          variant={filter === "paid" ? "default" : "outline"}
+          size="sm"
+          onClick={() => setFilter("paid")}
+        >
+          Paid
+        </Button>
       </div>
 
       <Table>
@@ -179,7 +213,9 @@ export function ApplicationsTab({
               <TableCell>{r.id}</TableCell>
               <TableCell>
                 <div className="font-medium">{r.student.name}</div>
-                <div className="text-xs text-muted-foreground">{r.student.email}</div>
+                <div className="text-xs text-muted-foreground">
+                  {r.student.email}
+                </div>
               </TableCell>
               <TableCell>
                 <div>{r.course}</div>
@@ -187,12 +223,84 @@ export function ApplicationsTab({
               </TableCell>
               <TableCell>{r.campus}</TableCell>
               <TableCell>
-                <Badge variant={paymentStatus(r) === "Paid" ? "default" : "secondary"}>
+                <Badge
+                  variant={
+                    paymentStatus(r) === "Paid" ? "default" : "secondary"
+                  }
+                >
                   {paymentStatus(r) === "Paid" ? "Paid" : "Unpaid"}
                 </Badge>
               </TableCell>
               <TableCell className="text-right">
-                <Button size="sm" onClick={() => setOpenId(r.id)}>Review</Button>
+                <div className="flex justify-end gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setOpenId(r.id)}
+                  >
+                    Review
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={async () => {
+                      if (
+                        !confirm(
+                          `Delete application ${r.id}? This cannot be undone.`,
+                        )
+                      )
+                        return;
+                      const idNum = Number(r.id);
+                      try {
+                        let ok = false;
+                        let res = await supabase
+                          .from("applications")
+                          .delete()
+                          .eq(
+                            "app_id",
+                            Number.isFinite(idNum) ? idNum : (r.id as any),
+                          )
+                          .select();
+                        if (!res.error && (res.data?.length ?? 0) > 0)
+                          ok = true;
+                        if (!ok) {
+                          res = await supabase
+                            .from("applications")
+                            .delete()
+                            .eq(
+                              "id",
+                              Number.isFinite(idNum) ? idNum : (r.id as any),
+                            )
+                            .select();
+                          if (!res.error && (res.data?.length ?? 0) > 0)
+                            ok = true;
+                        }
+                        if (ok) {
+                          setRemovedIds((prev) =>
+                            prev.includes(r.id) ? prev : [...prev, r.id],
+                          );
+                          toast({
+                            title: "Deleted",
+                            description: `Application ${r.id} removed.`,
+                          });
+                        } else {
+                          toast({
+                            title: "Delete failed",
+                            description:
+                              "No record removed. Check ID/permissions.",
+                          });
+                        }
+                      } catch (e: any) {
+                        toast({
+                          title: "Delete failed",
+                          description: e?.message || String(e),
+                        });
+                      }
+                    }}
+                  >
+                    Delete
+                  </Button>
+                </div>
               </TableCell>
             </TableRow>
           ))}
