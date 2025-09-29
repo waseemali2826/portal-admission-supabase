@@ -323,7 +323,6 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
             if (error) {
               // Save locally even if server fails
               addLocalEnquiry({
-                id: undefined as any,
                 name: payload.name,
                 course: payload.course,
                 contact: payload.contact,
