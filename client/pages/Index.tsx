@@ -242,10 +242,15 @@ export default function Index() {
       if (!c) continue;
       counts.set(c, (counts.get(c) || 0) + 1);
     }
-    return Array.from(counts.entries()).map(([course, count]) => ({
+    const data = Array.from(counts.entries()).map(([course, count]) => ({
       course,
       count,
     }));
+    // Static fallback when no enrollments available yet
+    if (!data.length || data.every((d) => d.count === 0)) {
+      return seedCourses.map((c) => ({ course: c.name, count: c.students }));
+    }
+    return data;
   }, [students, liveCourses]);
 
   useEffect(() => {
