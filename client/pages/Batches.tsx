@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
+import { getAllCourseNames } from "@/lib/courseStore";
 
 export type BatchStatus = "Upcoming" | "Recently Started" | "In Progress" | "Recently Ended" | "Ended" | "Frozen";
 export interface BatchItem {
@@ -34,7 +35,7 @@ export interface TimeSlot {
   faculty?: string;
 }
 
-const COURSES = ["Full-Stack Web Dev", "UI/UX Design", "Data Science", "Mobile App Dev"];
+// Courses now come from admin-added list via courseStore
 const CAMPUSES = ["Main Campus", "North Campus", "City Campus"];
 const INSTRUCTORS = ["Zara Khan", "Bilal Ahmad", "Umair Siddiqui", "Maryam Ali"];
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -67,13 +68,36 @@ export default function Batches() {
   ]);
 
   // Create form defaults
-  const [cCourse, setCCourse] = useState(COURSES[0]);
+  const [cCourse, setCCourse] = useState("");
   const [cCampus, setCCampus] = useState(CAMPUSES[0]);
   const [cInstructor, setCInstructor] = useState(INSTRUCTORS[0]);
 
   const [activeBatchId, setActiveBatchId] = useState<string>(batches[0]?.id || "");
   const activeBatch = useMemo(()=> batches.find(b=> b.id===activeBatchId) || batches[0], [batches, activeBatchId]);
   const activeSlots = useMemo(()=> slots.filter(s=> s.batchId===activeBatch?.id), [slots, activeBatch]);
+
+  const [version, setVersion] = useState(0);
+  const coursesDyn = useMemo<string[]>(() => {
+    try {
+      return getAllCourseNames();
+    } catch {
+      return [];
+    }
+  }, [version]);
+
+  useEffect(() => {
+    const bump = () => setVersion((v) => v + 1);
+    window.addEventListener("courses:changed", bump);
+    window.addEventListener("storage", bump);
+    return () => {
+      window.removeEventListener("courses:changed", bump);
+      window.removeEventListener("storage", bump);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!cCourse && coursesDyn.length) setCCourse(coursesDyn[0]);
+  }, [coursesDyn, cCourse]);
 
   const genCode = (course: string, campus: string) => {
     const c = course.split(" ").map(p=> p[0]).join("").toUpperCase();
@@ -170,7 +194,15 @@ export default function Batches() {
                   <Label>Course Name</Label>
                   <Select value={cCourse} onValueChange={setCCourse}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectGroup>{COURSES.map(c=> <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectGroup></SelectContent>
+                    <SelectContent>
+                      <SelectGroup>
+                        {coursesDyn.map((c) => (
+                          <SelectItem key={c} value={c}>
+                            {c}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
                   </Select>
                 </div>
                 <div className="space-y-1.5">
@@ -182,7 +214,7 @@ export default function Batches() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Batch Code (Auto Generated)</Label>
-                  <Input disabled value={genCode(cCourse, cCampus)} />
+                  <Input disabled value={cCourse && cCampus ? genCode(cCourse, cCampus) : ""} />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Starting Date</Label>
