@@ -85,21 +85,23 @@ export default function Index() {
     };
   }, []);
 
-  // fetch courses from Supabase; fallback to local defaults
+  // fetch courses from Supabase; fallback to local defaults ONLY if empty
   useEffect(() => {
     (async () => {
+      let loaded = false;
       try {
         const { data, error } = await supabase
           .from("courses")
           .select("name,fees,status,created_at")
           .order("created_at", { ascending: false });
-        if (!error && Array.isArray(data)) {
+        if (!error && Array.isArray(data) && data.length) {
           setCourses(
             data.map((c: any) => ({ name: c.name, fees: Number(c.fees) || 0 })),
           );
+          loaded = true;
         }
       } catch {}
-      if (!courses.length) {
+      if (!loaded) {
         try {
           const names = getAllCourseNames();
           const stored = getStoredCourses();
@@ -129,7 +131,7 @@ export default function Index() {
                 ({ data }) =>
                   data &&
                   setCourses(
-                    data.map((c: any) => ({
+                    (data || []).map((c: any) => ({
                       name: c.name,
                       fees: Number(c.fees) || 0,
                     })),
