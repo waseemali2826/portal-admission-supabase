@@ -22,12 +22,11 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { StudentRecord, StudentStatus } from "./types";
 import { paymentStatus } from "./types";
 import { Profile } from "./Profile";
-import { COURSES } from "@/data/courses";
-import { getStoredCourses } from "@/lib/courseStore";
+import { getAllCourseNames } from "@/lib/courseStore";
 
 const statuses: StudentStatus[] = [
   "Current",
@@ -51,13 +50,23 @@ export function Directory({
   const [batch, setBatch] = useState<string>("");
   const [campus, setCampus] = useState<string>("");
   const [openId, setOpenId] = useState<string | null>(null);
+  const [version, setVersion] = useState(0);
+
+  useEffect(() => {
+    const bump = () => setVersion((v) => v + 1);
+    window.addEventListener("courses:changed", bump);
+    window.addEventListener("storage", bump);
+    return () => {
+      window.removeEventListener("courses:changed", bump);
+      window.removeEventListener("storage", bump);
+    };
+  }, []);
 
   const courses = useMemo(() => {
-    const fromData = data.map((d) => d.admission.course);
-    const base = COURSES.map((c) => c.name);
-    const stored = getStoredCourses().map((c) => c.name);
-    return Array.from(new Set([...fromData, ...base, ...stored])).sort();
-  }, [data]);
+    const fromData = data.map((d) => d.admission.course).filter(Boolean);
+    const stored = getAllCourseNames(); // only admin-added/store-synced names
+    return Array.from(new Set([...(stored || []), ...fromData])).sort();
+  }, [data, version]);
   const batches = Array.from(
     new Set(data.map((d) => d.admission.batch)),
   ).sort();
