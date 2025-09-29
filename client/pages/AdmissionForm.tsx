@@ -438,7 +438,7 @@ export default function AdmissionForm() {
   // Fetch courses dynamically from Supabase
   const fetchCourses = async () => {
     const { data, error } = await supabase
-      .from<Course, Course>("courses")
+      .from("courses")
       .select("*")
       .eq("status", "live")
       .order("created_at", { ascending: false });
