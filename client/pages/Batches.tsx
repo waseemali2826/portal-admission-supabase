@@ -65,7 +65,7 @@ export default function Batches() {
   // Create form defaults
   const [cCourse, setCCourse] = useState("");
   const [cCampus, setCCampus] = useState(CAMPUSES[0]);
-  const [cInstructor, setCInstructor] = useState(INSTRUCTORS[0]);
+  const [cInstructor, setCInstructor] = useState("");
 
   const [activeBatchId, setActiveBatchId] = useState<string>(batches[0]?.id || "");
   const activeBatch = useMemo(()=> batches.find(b=> b.id===activeBatchId) || batches[0], [batches, activeBatchId]);
@@ -221,10 +221,7 @@ export default function Batches() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Assigned Instructor</Label>
-                  <Select value={cInstructor} onValueChange={setCInstructor}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectGroup>{INSTRUCTORS.map(i=> <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectGroup></SelectContent>
-                  </Select>
+                  <Input value={cInstructor} onChange={(e)=> setCInstructor(e.target.value)} placeholder="Enter instructor name" />
                 </div>
                 <div className="space-y-1.5">
                   <Label>Maximum Students</Label>
@@ -344,10 +341,7 @@ export default function Batches() {
                 </div>
                 <div className="space-y-1.5">
                   <Label>Faculty</Label>
-                  <Select name="faculty" defaultValue={activeBatch?.instructor || INSTRUCTORS[0]}>
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent><SelectGroup>{INSTRUCTORS.map(i=> <SelectItem key={i} value={i}>{i}</SelectItem>)}</SelectGroup></SelectContent>
-                  </Select>
+                  <Input name="faculty" defaultValue={activeBatch?.instructor || ""} placeholder="Enter faculty name" />
                 </div>
                 <div className="space-y-1.5 flex items-end">
                   <Button type="submit">Add Slot</Button>
@@ -494,7 +488,7 @@ export default function Batches() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {INSTRUCTORS.map(i=> (
+                    {Array.from(new Set(batches.map(b=> b.instructor).filter(Boolean))).map(i=> (
                       <TableRow key={i}>
                         <TableCell>{i}</TableCell>
                         <TableCell className="text-right">{batches.filter(b=> b.instructor===i).length}</TableCell>
