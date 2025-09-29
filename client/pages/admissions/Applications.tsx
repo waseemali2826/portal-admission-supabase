@@ -137,14 +137,15 @@ import { Details } from "./Details";
 export function ApplicationsTab({
   data,
   onUpdate,
+  onDeleted,
 }: {
   data: AdmissionRecord[];
   onUpdate: (rec: AdmissionRecord) => void;
+  onDeleted?: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"unpaid" | "paid">("unpaid");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [removedIds, setRemovedIds] = useState<string[]>([]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -159,9 +160,8 @@ export function ApplicationsTab({
     );
     const isPaid = (r: AdmissionRecord) => paymentStatus(r) === "Paid";
     rows = rows.filter((r) => (filter === "paid" ? isPaid(r) : !isPaid(r)));
-    rows = rows.filter((r) => !removedIds.includes(r.id));
     return rows;
-  }, [data, query, filter, removedIds]);
+  }, [data, query, filter]);
 
   const record = data.find((r) => r.id === openId) || null;
 
