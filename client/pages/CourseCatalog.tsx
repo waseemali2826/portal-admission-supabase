@@ -60,7 +60,7 @@ export default function CourseCatalog() {
 
   const fetchCourses = async () => {
     const { data, error } = await supabase
-      .from<Course>("courses")
+      .from("courses")
       .select("*")
       .order("created_at", { ascending: false });
     if (error) console.error(error);
