@@ -64,7 +64,7 @@ export const roles: Role[] = [
     permissions: {
       ...none(allMods),
       Enquiries: { view: true, add: true, edit: true, delete: false },
-      Admissions: { view: true, add: true, edit: true, delete: false },
+      Admissions: { view: true, add: true, edit: true, delete: true },
       Students: { view: true, add: true, edit: true, delete: false },
     },
   },
