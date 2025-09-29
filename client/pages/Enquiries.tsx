@@ -50,8 +50,9 @@ import {
   UserPlus,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
-import { getLocalEnquiries, addLocalEnquiry } from "@/lib/enquiryStore";
+import { getLocalEnquiries, addLocalEnquiry, updateLocalEnquiry } from "@/lib/enquiryStore";
 import { getAllCourseNames } from "@/lib/courseStore";
+import { useNavigate } from "react-router-dom";
 
 const COUNTRIES = ["Pakistan", "India", "UAE"] as const;
 const CITIES = ["Faisalabad", "Lahore", "Islamabad"] as const;
@@ -696,6 +697,14 @@ function FollowUp({
 }
 
 function FollowTable({ data }: { data: Enquiry[] }) {
+  const navigate = useNavigate();
+  const phoneLink = (p: string) => `tel:${String(p || "").replace(/[^\d+]/g, "")}`;
+  const smsLink = (p: string) => `sms:${String(p || "").replace(/[^\d+]/g, "")}`;
+  const waLink = (p: string, text: string) => {
+    const num = String(p || "").replace(/[^\d]/g, "");
+    const q = encodeURIComponent(text);
+    return `https://wa.me/${num}?text=${q}`;
+  };
   return (
     <Card>
       <CardHeader>
@@ -739,25 +748,28 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                       <DropdownMenuContent align="end" className="w-56">
                         <DropdownMenuLabel>Contact</DropdownMenuLabel>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `Calling ${e.contact}` })
-                          }
+                          onClick={() => {
+                            try { window.open(phoneLink(e.contact), "_blank"); } catch {}
+                            toast({ title: `Calling ${e.contact}` });
+                          }}
                         >
                           <Phone className="h-4 w-4 mr-2" />
                           Voice Call
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `SMS to ${e.contact}` })
-                          }
+                          onClick={() => {
+                            try { window.open(smsLink(e.contact), "_blank"); } catch {}
+                            toast({ title: `SMS to ${e.contact}` });
+                          }}
                         >
                           <MessageSquare className="h-4 w-4 mr-2" />
                           Text Message
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `Email to ${e.email || "N/A"}` })
-                          }
+                          onClick={() => {
+                            if (e.email) { try { window.open(`mailto:${e.email}`); } catch {} }
+                            toast({ title: `Email to ${e.email || "N/A"}` });
+                          }}
                         >
                           <Mail className="h-4 w-4 mr-2" />
                           Email
@@ -769,23 +781,29 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                           Live Chat
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `WhatsApp to ${e.contact}` })
-                          }
+                          onClick={() => {
+                            try { window.open(waLink(e.contact, `Assalam o Alaikum ${e.name}, this is regarding your enquiry for ${e.course}.`), "_blank"); } catch {}
+                            toast({ title: `WhatsApp to ${e.contact}` });
+                          }}
                         >
                           <MessageCircle className="h-4 w-4 mr-2" />
                           WhatsApp
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => toast({ title: `Walk-In scheduled` })}
+                          onClick={() => {
+                            updateLocalEnquiry(e.id, { next_follow: new Date().toISOString() } as any);
+                            toast({ title: `Walk-In scheduled` });
+                          }}
                         >
                           <Footprints className="h-4 w-4 mr-2" />
                           Walk-In
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({ title: `Transferred enquiry ${e.id}` })
-                          }
+                          onClick={() => {
+                            const to = prompt("Transfer to (name/desk)?") || "";
+                            if (to) updateLocalEnquiry(e.id, { remarks: `Transferred to ${to}` } as any);
+                            toast({ title: `Transferred enquiry ${e.id}` });
+                          }}
                         >
                           <ArrowRightLeft className="h-4 w-4 mr-2" />
                           Transfer Enquiry
@@ -793,24 +811,20 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                         <DropdownMenuSeparator />
                         <DropdownMenuLabel>Outcome</DropdownMenuLabel>
                         <DropdownMenuItem
-                          onClick={() =>
-                            toast({
-                              title: `Enroll Now`,
-                              description: `Open admission form for ${e.name}`,
-                            })
-                          }
+                          onClick={() => {
+                            updateLocalEnquiry(e.id, { status: "Enrolled" } as any);
+                            const url = `/admission-form?course=${encodeURIComponent(e.course)}&name=${encodeURIComponent(e.name)}&phone=${encodeURIComponent(e.contact)}&email=${encodeURIComponent(e.email || "")}`;
+                            navigate(url);
+                          }}
                         >
                           <CheckCircle2 className="h-4 w-4 mr-2" />
                           Enroll Now
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => {
-                            const reason =
-                              prompt("Reason for not interested?") || "";
-                            toast({
-                              title: `Marked Not Interested`,
-                              description: reason || "No reason specified",
-                            });
+                            const reason = prompt("Reason for not interested?") || "";
+                            updateLocalEnquiry(e.id, { status: "Not Interested", remarks: reason } as any);
+                            toast({ title: `Marked Not Interested`, description: reason || "No reason specified" });
                           }}
                         >
                           <XCircle className="h-4 w-4 mr-2" />
@@ -876,7 +890,7 @@ function StatusTracking({ enquiries }: { enquiries: Enquiry[] }) {
                     <TableCell>{e.stage}</TableCell>
                     <TableCell>{e.source}</TableCell>
                     <TableCell className="text-right">
-                      {e.nextFollow?.replace("T", " ") || "—"}
+                      {e.nextFollow?.replace("T", " ") || "���"}
                     </TableCell>
                   </TableRow>
                 ))}
