@@ -702,7 +702,11 @@ export default function CoursesAdmin() {
     if (!confirm("Delete this course?")) return;
     const { error } = await supabase.from("courses").delete().eq("id", id);
     if (error) {
-      toast({ title: "Failed", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed",
+        description: error.message,
+        variant: "destructive",
+      });
       return;
     }
     toast({ title: "Deleted", description: "Course removed" });
@@ -710,7 +714,13 @@ export default function CoursesAdmin() {
       const next = prev.filter((c) => c.id !== id);
       try {
         mergeSupabaseCourses(
-          next.map((c) => ({ id: c.id, name: c.name, duration: c.duration, fees: Number(c.fees) || 0, description: c.description || "" })),
+          next.map((c) => ({
+            id: c.id,
+            name: c.name,
+            duration: c.duration,
+            fees: Number(c.fees) || 0,
+            description: c.description || "",
+          })),
         );
       } catch {}
       return next;
@@ -731,7 +741,11 @@ export default function CoursesAdmin() {
       .select()
       .single();
     if (error) {
-      toast({ title: "Failed", description: error.message, variant: "destructive" });
+      toast({
+        title: "Failed",
+        description: error.message,
+        variant: "destructive",
+      });
       return;
     }
     toast({ title: "Updated", description: `${updated.name}` });
@@ -739,7 +753,13 @@ export default function CoursesAdmin() {
       const next = prev.map((c) => (c.id === id ? { ...c, ...updated } : c));
       try {
         mergeSupabaseCourses(
-          next.map((c) => ({ id: c.id, name: c.name, duration: c.duration, fees: Number(c.fees) || 0, description: c.description || "" })),
+          next.map((c) => ({
+            id: c.id,
+            name: c.name,
+            duration: c.duration,
+            fees: Number(c.fees) || 0,
+            description: c.description || "",
+          })),
         );
       } catch {}
       return next;
@@ -767,28 +787,57 @@ export default function CoursesAdmin() {
                     onSubmit={(e) => {
                       e.preventDefault();
                       const form = e.target as HTMLFormElement;
-                      const data = Object.fromEntries(new FormData(form).entries());
+                      const data = Object.fromEntries(
+                        new FormData(form).entries(),
+                      );
                       handleUpdateCourse(c.id, data);
                     }}
                   >
                     <div className="space-y-1.5">
                       <Label htmlFor={`name-${c.id}`}>Course Name</Label>
-                      <Input id={`name-${c.id}`} name="name" defaultValue={c.name} required />
+                      <Input
+                        id={`name-${c.id}`}
+                        name="name"
+                        defaultValue={c.name}
+                        required
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor={`duration-${c.id}`}>Duration</Label>
-                      <Input id={`duration-${c.id}`} name="duration" defaultValue={c.duration} required />
+                      <Input
+                        id={`duration-${c.id}`}
+                        name="duration"
+                        defaultValue={c.duration}
+                        required
+                      />
                     </div>
                     <div className="space-y-1.5">
                       <Label htmlFor={`fees-${c.id}`}>Fees</Label>
-                      <Input id={`fees-${c.id}`} name="fees" type="number" min={0} defaultValue={c.fees} required />
+                      <Input
+                        id={`fees-${c.id}`}
+                        name="fees"
+                        type="number"
+                        min={0}
+                        defaultValue={c.fees}
+                        required
+                      />
                     </div>
                     <div className="sm:col-span-2 space-y-1.5">
                       <Label htmlFor={`description-${c.id}`}>Description</Label>
-                      <Textarea id={`description-${c.id}`} name="description" defaultValue={c.description || ""} />
+                      <Textarea
+                        id={`description-${c.id}`}
+                        name="description"
+                        defaultValue={c.description || ""}
+                      />
                     </div>
                     <div className="sm:col-span-2 flex justify-end gap-2">
-                      <Button type="button" variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditing(null)}
+                      >
+                        Cancel
+                      </Button>
                       <Button type="submit">Save</Button>
                     </div>
                   </form>
@@ -799,8 +848,20 @@ export default function CoursesAdmin() {
                     <p>Fees: ₨ {c.fees.toLocaleString()}</p>
                     <p>{c.description}</p>
                     <div className="flex gap-2 pt-2">
-                      <Button size="sm" variant="outline" onClick={() => setEditing(c.id)}>Edit</Button>
-                      <Button size="sm" variant="destructive" onClick={() => handleDeleteCourse(c.id)}>Delete</Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditing(c.id)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeleteCourse(c.id)}
+                      >
+                        Delete
+                      </Button>
                     </div>
                   </div>
                 )}

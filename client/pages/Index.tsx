@@ -298,7 +298,11 @@ export default function Index() {
         localList = getLocalEnquiries();
       } catch {}
       const merged = [...supaList, ...localList]
-        .sort((a, b) => new Date(b.created_at || b.createdAt || 0).getTime() - new Date(a.created_at || a.createdAt || 0).getTime())
+        .sort(
+          (a, b) =>
+            new Date(b.created_at || b.createdAt || 0).getTime() -
+            new Date(a.created_at || a.createdAt || 0).getTime(),
+        )
         .slice(0, 5);
       setRecentEnquiries(merged);
       setEnquiriesCount(supaCount ?? localList.length);

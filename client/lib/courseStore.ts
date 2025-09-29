@@ -21,7 +21,9 @@ export function getStoredCourses(): StoredCourse[] {
 function setStoredCourses(list: StoredCourse[]) {
   localStorage.setItem(KEY, JSON.stringify(list));
   try {
-    window.dispatchEvent(new CustomEvent("courses:changed", { detail: { type: "sync" } }));
+    window.dispatchEvent(
+      new CustomEvent("courses:changed", { detail: { type: "sync" } }),
+    );
   } catch {}
 }
 
@@ -29,7 +31,9 @@ import { COURSES as PUBLIC_COURSES } from "@/data/courses";
 
 export function getAllCourseNames(): string[] {
   try {
-    const fromStore = getStoredCourses().map((c) => c.name).filter(Boolean);
+    const fromStore = getStoredCourses()
+      .map((c) => c.name)
+      .filter(Boolean);
     return Array.from(new Set(fromStore));
   } catch {
     return [];
@@ -57,7 +61,13 @@ export function addStoredCourse(
 }
 
 export function mergeSupabaseCourses(
-  courses: Array<{ id: string | number; name: string; duration?: string; fees?: number; description?: string }>,
+  courses: Array<{
+    id: string | number;
+    name: string;
+    duration?: string;
+    fees?: number;
+    description?: string;
+  }>,
 ) {
   const existing = getStoredCourses();
   // Remove previous Supabase-sourced courses (id prefix SB-)
