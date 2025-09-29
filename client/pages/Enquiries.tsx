@@ -50,6 +50,7 @@ import {
   UserPlus,
 } from "lucide-react";
 import { supabase } from "@/lib/supabaseClient";
+import { getLocalEnquiries, addLocalEnquiry } from "@/lib/enquiryStore";
 import { getAllCourseNames } from "@/lib/courseStore";
 
 const COUNTRIES = ["Pakistan", "India", "UAE"] as const;
@@ -103,6 +104,7 @@ export default function Enquiries() {
   >("All");
 
   const [serverPub, setServerPub] = useState<any[]>([]);
+  const [localPub, setLocalPub] = useState<any[]>([]);
   useEffect(() => {
     (async () => {
       try {
@@ -115,6 +117,15 @@ export default function Enquiries() {
         // ignore
       }
     })();
+    const loadLocal = () => setLocalPub(getLocalEnquiries());
+    loadLocal();
+    const onChange = () => loadLocal();
+    window.addEventListener("enquiries:changed", onChange as EventListener);
+    window.addEventListener("storage", onChange as EventListener);
+    return () => {
+      window.removeEventListener("enquiries:changed", onChange as EventListener);
+      window.removeEventListener("storage", onChange as EventListener);
+    };
   }, []);
 
   const filtered = useMemo(() => {
@@ -141,7 +152,31 @@ export default function Enquiries() {
       }),
     );
 
-    const merged: Enquiry[] = fromSupabase;
+    const fromLocal = localPub.map(
+      (p: any): Enquiry => ({
+        id: String(
+          p.id ??
+            p.enquiry_id ??
+            p.created_at ??
+            crypto.randomUUID?.() ??
+            Date.now(),
+        ),
+        name: p.name,
+        course: p.course,
+        contact: p.contact ?? p.phone,
+        email: p.email ?? undefined,
+        city: p.city ?? "Lahore",
+        source:
+          p.source ?? (Array.isArray(p.sources) ? p.sources[0] : "Website"),
+        nextFollow: p.next_follow ?? p.preferred_start ?? undefined,
+        stage: p.stage ?? "Prospective",
+        status: p.status ?? "Pending",
+      }),
+    );
+
+    const mergedMap = new Map<string, Enquiry>();
+    [...fromSupabase, ...fromLocal].forEach((e) => mergedMap.set(e.id, e));
+    const merged: Enquiry[] = Array.from(mergedMap.values());
     return merged.filter(
       (e) =>
         (stageFilter === "All" || e.stage === stageFilter) &&
@@ -286,18 +321,57 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
               .single();
 
             if (error) {
-              toast({ title: "Failed to save", description: error.message });
-              return;
+              // Save locally even if server fails
+              addLocalEnquiry({
+                id: undefined as any,
+                name: payload.name,
+                course: payload.course,
+                contact: payload.contact,
+                email: payload.email,
+                gender: payload.gender,
+                country: payload.country,
+                city: payload.city,
+                area: payload.area,
+                campus: payload.campus,
+                next_follow: payload.next_follow,
+                probability: payload.probability,
+                sources: payload.sources,
+                source: payload.source,
+                remarks: payload.remarks,
+                stage: payload.stage,
+                status: payload.status,
+              });
+              toast({ title: "Saved locally", description: error.message });
+            } else {
+              // Save locally as well to keep offline copy (de-duped by id)
+              addLocalEnquiry({
+                id: String(data.id),
+                name: payload.name,
+                course: payload.course,
+                contact: payload.contact,
+                email: payload.email,
+                gender: payload.gender,
+                country: payload.country,
+                city: payload.city,
+                area: payload.area,
+                campus: payload.campus,
+                next_follow: payload.next_follow,
+                probability: payload.probability,
+                sources: payload.sources,
+                source: payload.source,
+                remarks: payload.remarks,
+                stage: payload.stage,
+                status: payload.status,
+              });
+              toast({
+                title: "Enquiry created",
+                description: `${payload.name} (${payload.course}) saved.`,
+              });
+              onCreated(data);
             }
-
-            toast({
-              title: "Enquiry created",
-              description: `${payload.name} (${payload.course}) saved.`,
-            });
             form.reset();
             setSources([]);
             setProbability([50]);
-            onCreated(data);
           }}
         >
           <div className="space-y-1.5">
