@@ -35,6 +35,7 @@ import {
   BarChart2,
 } from "lucide-react";
 import { getStoredCourses, getAllCourseNames } from "@/lib/courseStore";
+import { COURSES as PUBLIC_COURSES } from "@/data/courses";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudents } from "@/lib/studentStore";
 import { studentsMock } from "./students/data";
@@ -190,6 +191,31 @@ export default function Index() {
 
   const liveCourses = useMemo(() => courses, [courses]);
 
+  const publicCourseNames = useMemo(
+    () => PUBLIC_COURSES.map((c) => c.name),
+    [],
+  );
+
+  function mapToPublicCourseName(name?: string): string | null {
+    if (!name) return null;
+    const n = name.toLowerCase();
+    // exact or includes match first
+    for (const p of publicCourseNames) {
+      const pl = p.toLowerCase();
+      if (n === pl || pl.includes(n) || n.includes(pl)) return p;
+    }
+    // token overlap fallback
+    const tokens = n.split(/[^a-z0-9]+/g).filter(Boolean);
+    let best: { p: string; score: number } | null = null;
+    for (const p of publicCourseNames) {
+      const ptokens = p.toLowerCase().split(/[^a-z0-9]+/g).filter(Boolean);
+      const set = new Set(ptokens);
+      const overlap = tokens.filter((t) => set.has(t)).length;
+      if (!best || overlap > best.score) best = { p, score: overlap };
+    }
+    return best && best.score > 0 ? best.p : null;
+  }
+
   // Students & income stats (prefer live DB, fallback to local/mock)
   const students = useMemo(() => {
     if (studentsOnline.length) return studentsOnline as any[];
@@ -235,23 +261,21 @@ export default function Index() {
   }, [students]);
 
   const enrollByCourse = useMemo(() => {
+    // Only public-site courses
     const counts = new Map<string, number>();
-    for (const c of liveCourses) counts.set(c.name, 0);
+    for (const name of publicCourseNames) counts.set(name, 0);
+
     for (const s of students as any[]) {
-      const c = s?.admission?.course;
-      if (!c) continue;
-      counts.set(c, (counts.get(c) || 0) + 1);
+      const mapped = mapToPublicCourseName(s?.admission?.course);
+      if (!mapped) continue;
+      counts.set(mapped, (counts.get(mapped) || 0) + 1);
     }
-    const data = Array.from(counts.entries()).map(([course, count]) => ({
+
+    return Array.from(counts.entries()).map(([course, count]) => ({
       course,
       count,
     }));
-    // Static fallback when no enrollments available yet
-    if (!data.length || data.every((d) => d.count === 0)) {
-      return seedCourses.map((c) => ({ course: c.name, count: c.students }));
-    }
-    return data;
-  }, [students, liveCourses]);
+  }, [students, publicCourseNames]);
 
   useEffect(() => {
     (async () => {
