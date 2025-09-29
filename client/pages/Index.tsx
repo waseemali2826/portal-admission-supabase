@@ -38,7 +38,7 @@ import { getStoredCourses, getAllCourseNames } from "@/lib/courseStore";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudents } from "@/lib/studentStore";
 import { studentsMock } from "./students/data";
-import { recentEnquiriesSample } from "@/data/enquiries";
+import { getLocalEnquiries } from "@/lib/enquiryStore";
 
 type Course = {
   name: string;
@@ -280,13 +280,63 @@ export default function Index() {
     }));
   }, [students, liveCourseNames]);
 
-  // Static-only Recent Enquiries for dashboard
+  // Recent Enquiries: follow Enquiry Follow-Up sources (Supabase → API → Local), show last 5
   useEffect(() => {
-    setRecentEnquiries(recentEnquiriesSample.slice(0, 5));
-    setEnquiriesCount(recentEnquiriesSample.length);
+    let mounted = true;
+    const load = async () => {
+      let got = false;
+      try {
+        const { data, count, error } = await supabase
+          .from("enquiries")
+          .select("*", { count: "exact" })
+          .order("created_at", { ascending: false })
+          .limit(5);
+        if (!error && Array.isArray(data)) {
+          if (mounted) {
+            setRecentEnquiries(data);
+            setEnquiriesCount(count || data.length || 0);
+          }
+          got = data.length > 0;
+        }
+      } catch {}
+      if (!got) {
+        try {
+          const r = await fetch("/api/public/enquiries");
+          if (r.ok) {
+            const { items } = await r.json();
+            const rows = Array.isArray(items) ? items : [];
+            if (mounted) {
+              setRecentEnquiries(rows.slice(0, 5));
+              setEnquiriesCount(rows.length);
+            }
+            got = rows.length > 0;
+          }
+        } catch {}
+      }
+      if (!got) {
+        try {
+          const rows = getLocalEnquiries();
+          if (mounted) {
+            setRecentEnquiries(rows.slice(0, 5));
+            setEnquiriesCount(rows.length);
+          }
+        } catch {}
+      }
+    };
+    load();
+    const onChange = () => load();
+    window.addEventListener("enquiries:changed", onChange as EventListener);
+    window.addEventListener("storage", onChange as EventListener);
+    const iv = setInterval(load, 5000);
+    return () => {
+      mounted = false;
+      window.removeEventListener("enquiries:changed", onChange as EventListener);
+      window.removeEventListener("storage", onChange as EventListener);
+      clearInterval(iv);
+    };
   }, []);
 
-  // Keep pending applications count dynamic (unchanged)
+  // Pending applications count
   useEffect(() => {
     (async () => {
       try {
