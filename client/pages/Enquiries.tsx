@@ -317,8 +317,7 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
             const { data, error } = await supabase
               .from("enquiries")
               .insert([payload])
-              .select()
-              .single();
+              .select();
 
             if (error) {
               // Save locally even if server fails
@@ -340,7 +339,8 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
                 stage: payload.stage,
                 status: payload.status,
               });
-              toast({ title: "Saved locally", description: error.message });
+              console.warn("Enquiry save failed; stored locally", error);
+              toast({ title: "Saved locally", description: "Server unreachable or blocked. Enquiry saved on this device." });
             } else {
               // Save locally as well to keep offline copy (de-duped by id)
               addLocalEnquiry({
@@ -366,7 +366,7 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
                 title: "Enquiry created",
                 description: `${payload.name} (${payload.course}) saved.`,
               });
-              onCreated(data);
+              onCreated(Array.isArray(data) ? data[0] : data);
             }
             form.reset();
             setSources([]);
