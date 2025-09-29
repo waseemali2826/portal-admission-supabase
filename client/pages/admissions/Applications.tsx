@@ -131,7 +131,7 @@ import {
 } from "@/components/ui/sheet";
 import { useMemo, useState } from "react";
 import { paymentStatus } from "./types";
-import type { AdmissionRecord, AdmissionStatus } from "./types";
+import type { AdmissionRecord } from "./types";
 import { Details } from "./Details";
 
 export function ApplicationsTab({
