@@ -371,7 +371,7 @@ export default function Reports() {
             />
             <StatsCard
               title="Top Source"
-              value={`${enquiryBySource.slice().sort((a, b) => b.count - a.count)[0].source}`}
+              value={`${enquiryBySource.slice().sort((a, b) => b.count - a.count)[0]?.source || "-"}`}
               subtitle="By count"
             />
             <StatsCard
