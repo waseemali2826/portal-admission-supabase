@@ -35,7 +35,6 @@ import {
   BarChart2,
 } from "lucide-react";
 import { getStoredCourses, getAllCourseNames } from "@/lib/courseStore";
-import { COURSES as PUBLIC_COURSES } from "@/data/courses";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudents } from "@/lib/studentStore";
 import { studentsMock } from "./students/data";
@@ -191,23 +190,21 @@ export default function Index() {
 
   const liveCourses = useMemo(() => courses, [courses]);
 
-  const publicCourseNames = useMemo(
-    () => PUBLIC_COURSES.map((c) => c.name),
-    [],
+  const liveCourseNames = useMemo(
+    () => liveCourses.map((c) => c.name),
+    [liveCourses],
   );
 
-  function mapToPublicCourseName(name?: string): string | null {
+  function mapToLiveCourseName(name?: string): string | null {
     if (!name) return null;
     const n = name.toLowerCase();
-    // exact or includes match first
-    for (const p of publicCourseNames) {
+    for (const p of liveCourseNames) {
       const pl = p.toLowerCase();
       if (n === pl || pl.includes(n) || n.includes(pl)) return p;
     }
-    // token overlap fallback
     const tokens = n.split(/[^a-z0-9]+/g).filter(Boolean);
     let best: { p: string; score: number } | null = null;
-    for (const p of publicCourseNames) {
+    for (const p of liveCourseNames) {
       const ptokens = p.toLowerCase().split(/[^a-z0-9]+/g).filter(Boolean);
       const set = new Set(ptokens);
       const overlap = tokens.filter((t) => set.has(t)).length;
@@ -261,12 +258,12 @@ export default function Index() {
   }, [students]);
 
   const enrollByCourse = useMemo(() => {
-    // Only public-site courses
+    // Only courses visible on the public Courses page (from Supabase fetch)
     const counts = new Map<string, number>();
-    for (const name of publicCourseNames) counts.set(name, 0);
+    for (const name of liveCourseNames) counts.set(name, 0);
 
     for (const s of students as any[]) {
-      const mapped = mapToPublicCourseName(s?.admission?.course);
+      const mapped = mapToLiveCourseName(s?.admission?.course);
       if (!mapped) continue;
       counts.set(mapped, (counts.get(mapped) || 0) + 1);
     }
@@ -275,7 +272,7 @@ export default function Index() {
       course,
       count,
     }));
-  }, [students, publicCourseNames]);
+  }, [students, liveCourseNames]);
 
   useEffect(() => {
     (async () => {
