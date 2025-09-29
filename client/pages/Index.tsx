@@ -38,7 +38,7 @@ import { getStoredCourses, getAllCourseNames } from "@/lib/courseStore";
 import { supabase } from "@/lib/supabaseClient";
 import { getStudents } from "@/lib/studentStore";
 import { studentsMock } from "./students/data";
-import { getLocalEnquiries } from "@/lib/enquiryStore";
+import { recentEnquiriesSample } from "@/data/enquiries";
 
 type Course = {
   name: string;
@@ -280,72 +280,23 @@ export default function Index() {
     }));
   }, [students, liveCourseNames]);
 
+  // Static-only Recent Enquiries for dashboard
   useEffect(() => {
-    let mounted = true;
-    const load = async () => {
-      let got = false;
-      // 1) Try Supabase
-      try {
-        const { data, count, error } = await supabase
-          .from("enquiries")
-          .select("*", { count: "exact" })
-          .order("created_at", { ascending: false })
-          .limit(5);
-        if (!error && Array.isArray(data)) {
-          if (mounted) {
-            setRecentEnquiries(data);
-            setEnquiriesCount(count || data.length || 0);
-          }
-          got = data.length > 0;
-        }
-      } catch {}
-      // 2) Fallback to server fs store
-      if (!got) {
-        try {
-          const r = await fetch("/api/public/enquiries");
-          if (r.ok) {
-            const { items } = await r.json();
-            const rows = Array.isArray(items) ? items : [];
-            if (mounted) {
-              setRecentEnquiries(rows.slice(0, 5));
-              setEnquiriesCount(rows.length);
-            }
-            got = rows.length > 0;
-          }
-        } catch {}
-      }
-      // 3) Fallback to local storage
-      if (!got) {
-        try {
-          const rows = getLocalEnquiries();
-          if (mounted) {
-            setRecentEnquiries(rows.slice(0, 5));
-            setEnquiriesCount(rows.length);
-          }
-        } catch {}
-      }
+    setRecentEnquiries(recentEnquiriesSample.slice(0, 5));
+    setEnquiriesCount(recentEnquiriesSample.length);
+  }, []);
 
-      // Pending applications count (best-effort)
+  // Keep pending applications count dynamic (unchanged)
+  useEffect(() => {
+    (async () => {
       try {
         const { count } = await supabase
           .from("applications")
           .select("*", { count: "exact" })
           .eq("status", "Pending");
-        if (mounted) setApplicationsPendingCount(count || 0);
+        setApplicationsPendingCount(count || 0);
       } catch {}
-    };
-    load();
-
-    const onChange = () => load();
-    window.addEventListener("enquiries:changed", onChange as EventListener);
-    window.addEventListener("storage", onChange as EventListener);
-    const iv = setInterval(load, 5000);
-    return () => {
-      mounted = false;
-      window.removeEventListener("enquiries:changed", onChange as EventListener);
-      window.removeEventListener("storage", onChange as EventListener);
-      clearInterval(iv);
-    };
+    })();
   }, []);
 
   return (
