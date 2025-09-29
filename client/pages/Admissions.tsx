@@ -213,7 +213,12 @@ export default function Admissions() {
       console.error("Error fetching applications from API:", error);
     }
 
-    setItems(Array.from(records.values()));
+    const ordered = Array.from(records.values()).sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return bTime - aTime;
+    });
+    setItems(ordered);
   }, [supabase]);
 
   useEffect(() => {
