@@ -131,20 +131,21 @@ import {
 } from "@/components/ui/sheet";
 import { useMemo, useState } from "react";
 import { paymentStatus } from "./types";
-import type { AdmissionRecord, AdmissionStatus } from "./types";
+import type { AdmissionRecord } from "./types";
 import { Details } from "./Details";
 
 export function ApplicationsTab({
   data,
   onUpdate,
+  onDeleted,
 }: {
   data: AdmissionRecord[];
   onUpdate: (rec: AdmissionRecord) => void;
+  onDeleted?: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"unpaid" | "paid">("unpaid");
   const [openId, setOpenId] = useState<string | null>(null);
-  const [removedIds, setRemovedIds] = useState<string[]>([]);
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase();
@@ -159,9 +160,86 @@ export function ApplicationsTab({
     );
     const isPaid = (r: AdmissionRecord) => paymentStatus(r) === "Paid";
     rows = rows.filter((r) => (filter === "paid" ? isPaid(r) : !isPaid(r)));
-    rows = rows.filter((r) => !removedIds.includes(r.id));
     return rows;
-  }, [data, query, filter, removedIds]);
+  }, [data, query, filter]);
+
+  const trySupabaseDelete = async (targetId: string) => {
+    if (!supabase) return false;
+    const numeric = Number(targetId);
+    const values = Number.isFinite(numeric) ? [numeric, targetId] : [targetId];
+    const tables = ["applications", "public_applications"] as const;
+
+    for (const table of tables) {
+      for (const column of ["app_id", "id"] as const) {
+        for (const value of values) {
+          try {
+            const { data: removed, error } = await supabase
+              .from(table)
+              .delete()
+              .eq(column, value as any)
+              .select("id")
+              .limit(1);
+            if (!error && (removed?.length ?? 0) > 0) {
+              return true;
+            }
+          } catch (error) {
+            console.error(`Failed to delete from ${table}.${column}`, error);
+          }
+        }
+      }
+    }
+
+    return false;
+  };
+
+  const deleteViaApi = async (targetId: string) => {
+    try {
+      const response = await fetch("/api/public/applications/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: targetId }),
+      });
+      if (!response.ok) return false;
+      const payload = await response.json();
+      return Boolean(payload?.ok);
+    } catch (error) {
+      console.error("Failed to delete application via API", error);
+      return false;
+    }
+  };
+
+  const handleDelete = async (record: AdmissionRecord) => {
+    if (!confirm(`Delete application ${record.id}? This cannot be undone.`)) {
+      return;
+    }
+
+    const targetId = record.id;
+    let deleted = false;
+
+    try {
+      deleted = await trySupabaseDelete(targetId);
+    } catch (error) {
+      console.error("Supabase deletion error", error);
+    }
+
+    if (!deleted) {
+      deleted = await deleteViaApi(targetId);
+    }
+
+    if (deleted) {
+      if (openId === targetId) setOpenId(null);
+      onDeleted?.(targetId);
+      toast({
+        title: "Deleted",
+        description: `Application ${targetId} removed.`,
+      });
+    } else {
+      toast({
+        title: "Delete failed",
+        description: "Unable to remove this application. Check permissions.",
+      });
+    }
+  };
 
   const record = data.find((r) => r.id === openId) || null;
 
@@ -243,59 +321,8 @@ export function ApplicationsTab({
                   <Button
                     size="sm"
                     variant="destructive"
-                    onClick={async () => {
-                      if (
-                        !confirm(
-                          `Delete application ${r.id}? This cannot be undone.`,
-                        )
-                      )
-                        return;
-                      const idNum = Number(r.id);
-                      try {
-                        let ok = false;
-                        let res = await supabase
-                          .from("applications")
-                          .delete()
-                          .eq(
-                            "app_id",
-                            Number.isFinite(idNum) ? idNum : (r.id as any),
-                          )
-                          .select();
-                        if (!res.error && (res.data?.length ?? 0) > 0)
-                          ok = true;
-                        if (!ok) {
-                          res = await supabase
-                            .from("applications")
-                            .delete()
-                            .eq(
-                              "id",
-                              Number.isFinite(idNum) ? idNum : (r.id as any),
-                            )
-                            .select();
-                          if (!res.error && (res.data?.length ?? 0) > 0)
-                            ok = true;
-                        }
-                        if (ok) {
-                          setRemovedIds((prev) =>
-                            prev.includes(r.id) ? prev : [...prev, r.id],
-                          );
-                          toast({
-                            title: "Deleted",
-                            description: `Application ${r.id} removed.`,
-                          });
-                        } else {
-                          toast({
-                            title: "Delete failed",
-                            description:
-                              "No record removed. Check ID/permissions.",
-                          });
-                        }
-                      } catch (e: any) {
-                        toast({
-                          title: "Delete failed",
-                          description: e?.message || String(e),
-                        });
-                      }
+                    onClick={() => {
+                      void handleDelete(r);
                     }}
                   >
                     Delete

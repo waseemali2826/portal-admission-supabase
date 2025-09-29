@@ -198,3 +198,53 @@ export const listPublicApplications: RequestHandler = async (_req, res) => {
     res.status(500).json({ error: e?.message ?? "Server error" });
   }
 };
+
+export const deletePublicApplication: RequestHandler = async (req, res) => {
+  try {
+    const rawId = (req.body?.id ?? req.params?.id ?? req.query?.id) as
+      | string
+      | number
+      | undefined;
+    const targetId = rawId !== undefined && rawId !== null ? String(rawId) : "";
+    if (!targetId.trim()) {
+      return res.status(400).json({ error: "id is required" });
+    }
+
+    if (supabaseReady()) {
+      const supa = getSupabase()!;
+      const numeric = Number(targetId);
+      const values = Number.isFinite(numeric)
+        ? [numeric, targetId]
+        : [targetId];
+      const tables = ["applications", "public_applications"] as const;
+
+      for (const table of tables) {
+        for (const column of ["app_id", "id"] as const) {
+          for (const value of values) {
+            const { data, error } = await supa
+              .from(table)
+              .delete()
+              .eq(column, value as any)
+              .select("id")
+              .limit(1);
+            if (!error && (data?.length ?? 0) > 0) {
+              return res.json({ ok: true, removedId: targetId, source: table });
+            }
+          }
+        }
+      }
+
+      return res.status(404).json({ error: "Not found" });
+    }
+
+    const items = await readAllFs<PublicApplication>(applicationsFile);
+    const next = items.filter((item) => String(item.id) !== targetId);
+    if (next.length === items.length) {
+      return res.status(404).json({ error: "Not found" });
+    }
+    await writeAllFs(applicationsFile, next);
+    return res.json({ ok: true, removedId: targetId });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message ?? "Server error" });
+  }
+};

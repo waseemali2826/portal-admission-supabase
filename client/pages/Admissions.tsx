@@ -88,7 +88,7 @@
 // }
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { AdmissionRecord } from "./admissions/types";
 import { ApplicationsTab } from "./admissions/Applications";
 import { ReportsTab } from "./admissions/Reports";
@@ -97,49 +97,153 @@ import { supabase } from "@/lib/supabaseClient";
 export default function Admissions() {
   const [items, setItems] = useState<AdmissionRecord[]>([]);
 
-  const fetchApplications = async () => {
-    // Avoid relying on a specific PK name; different setups may use app_id, id, or uuid
-    const { data, error } = await supabase.from("applications").select("*");
-    if (error) {
-      console.error("Error fetching applications:", error);
-      return;
+  const fetchApplications = useCallback(async () => {
+    const records = new Map<string, AdmissionRecord>();
+
+    if (supabase) {
+      try {
+        const { data, error } = await supabase.from("applications").select("*");
+        if (!error && Array.isArray(data)) {
+          for (const entry of data) {
+            const rawId =
+              entry.app_id ??
+              entry.id ??
+              entry.appId ??
+              entry.appID ??
+              entry.uuid;
+            if (!rawId) continue;
+            const id = String(rawId);
+            const created =
+              entry.created_at ?? entry.createdAt ?? new Date().toISOString();
+            const installments =
+              Array.isArray(entry.fee_installments) &&
+              entry.fee_installments.length > 0
+                ? entry.fee_installments.map((inst: any, index: number) => ({
+                    id: String(inst.id ?? `I${index + 1}`),
+                    amount: Number(inst.amount ?? 0) || 0,
+                    dueDate: inst.due_date ?? inst.dueDate ?? created,
+                    paidAt: inst.paid_at ?? inst.paidAt ?? undefined,
+                  }))
+                : [
+                    {
+                      id: "due",
+                      amount: Number(entry.fee_total ?? 0) || 0,
+                      dueDate:
+                        entry.next_due_date ??
+                        new Date(
+                          Date.now() + 7 * 24 * 60 * 60 * 1000,
+                        ).toISOString(),
+                    },
+                  ];
+            const documents = Array.isArray(entry.documents)
+              ? entry.documents.map((doc: any, index: number) => ({
+                  name: String(doc.name ?? `Document ${index + 1}`),
+                  url: String(doc.url ?? "#"),
+                  verified: Boolean(doc.verified),
+                }))
+              : [];
+            records.set(id, {
+              id,
+              createdAt: String(created),
+              status: (entry.status as AdmissionRecord["status"]) ?? "Pending",
+              student: {
+                name: String(entry.name ?? ""),
+                email: String(entry.email ?? ""),
+                phone: String(entry.phone ?? ""),
+                dob: entry.dob ?? undefined,
+                address: entry.address ?? undefined,
+              },
+              course: String(entry.course ?? ""),
+              batch: String(entry.batch ?? "TBD"),
+              campus: String(entry.campus ?? "Main"),
+              fee: {
+                total: Number(entry.fee_total ?? 0) || 0,
+                installments,
+              },
+              documents,
+              notes: entry.notes ?? undefined,
+              studentId: entry.student_id ?? entry.studentId ?? undefined,
+              rejectedReason:
+                entry.rejected_reason ?? entry.rejectedReason ?? undefined,
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching applications from Supabase:", error);
+      }
     }
-    const mapped: AdmissionRecord[] = (data ?? []).map((p: any) => {
-      const anyId = p.app_id ?? p.id ?? p.appId ?? p.appID;
-      const created = p.created_at ?? p.createdAt ?? new Date().toISOString();
-      return {
-        id: String(anyId ?? ""),
-        student: { name: p.name, email: p.email, phone: p.phone },
-        course: p.course,
-        batch: p.batch ?? "TBD",
-        campus: p.campus ?? "Main",
-        startDate: p.start_date || undefined,
-        message: p.message || undefined,
-        fee: {
-          total: p.fee_total ?? 0,
-          installments: p.fee_installments || [],
-        },
-        documents: p.documents || [],
-        notes: p.notes || undefined,
-        status: p.status || "Pending",
-        studentId: p.student_id ?? undefined,
-        rejectedReason: p.rejected_reason ?? undefined,
-        createdAt: created,
-      };
+
+    try {
+      const response = await fetch("/api/public/applications");
+      if (response.ok) {
+        const payload = await response.json();
+        const items = Array.isArray(payload?.items) ? payload.items : [];
+        for (const entry of items) {
+          const rawId = entry.id ?? entry.app_id ?? entry.appId;
+          if (!rawId) continue;
+          const id = String(rawId);
+          if (records.has(id)) continue;
+          const created = entry.createdAt ?? new Date().toISOString();
+          const dueDate =
+            entry.preferredStart ??
+            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          records.set(id, {
+            id,
+            createdAt: String(created),
+            status: "Pending",
+            student: {
+              name: String(entry.name ?? ""),
+              email: String(entry.email ?? ""),
+              phone: String(entry.phone ?? ""),
+            },
+            course: String(entry.course ?? ""),
+            batch: "TBD",
+            campus: "Main",
+            fee: {
+              total: 0,
+              installments: [
+                {
+                  id: "due",
+                  amount: 0,
+                  dueDate,
+                },
+              ],
+            },
+            documents: [],
+            notes: entry.preferredStart
+              ? `Preferred start: ${entry.preferredStart}`
+              : undefined,
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching applications from API:", error);
+    }
+
+    const ordered = Array.from(records.values()).sort((a, b) => {
+      const aTime = new Date(a.createdAt).getTime();
+      const bTime = new Date(b.createdAt).getTime();
+      return bTime - aTime;
     });
-    setItems(mapped);
-  };
+    setItems(ordered);
+  }, [supabase]);
 
   useEffect(() => {
-    fetchApplications();
-    const interval = setInterval(fetchApplications, 5000);
+    void fetchApplications();
+    const interval = setInterval(() => {
+      void fetchApplications();
+    }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchApplications]);
 
   const upsert = async (next: AdmissionRecord) => {
     setItems((prev) => prev.map((r) => (r.id === next.id ? next : r)));
-    const idNum = Number(next.id);
-    const payload: any = {
+    if (!supabase) return;
+    const numericId = Number(next.id);
+    const candidateValues = Number.isFinite(numericId)
+      ? [numericId, next.id]
+      : [next.id];
+    const payload: Record<string, unknown> = {
       status: next.status,
       student_id: next.studentId || null,
       batch: next.batch,
@@ -150,23 +254,29 @@ export default function Admissions() {
       documents: next.documents ?? null,
       notes: next.notes ?? null,
     };
-    // Try updating by app_id, then fall back to id
-    try {
-      const byAppId = await supabase
-        .from("applications")
-        .update(payload)
-        .eq("app_id", Number.isFinite(idNum) ? idNum : next.id as any);
-      if (!byAppId.error) return;
-    } catch {}
-    try {
-      await supabase
-        .from("applications")
-        .update(payload)
-        .eq("id", Number.isFinite(idNum) ? idNum : next.id as any);
-    } catch (e) {
-      console.error("Failed to persist application update", e);
+
+    for (const column of ["app_id", "id"]) {
+      for (const value of candidateValues) {
+        try {
+          const { error } = await supabase
+            .from("applications")
+            .update(payload)
+            .eq(column, value as any);
+          if (!error) return;
+        } catch (error) {
+          console.error("Failed to persist application update", error);
+        }
+      }
     }
   };
+
+  const handleDeleted = useCallback(
+    (id: string) => {
+      setItems((prev) => prev.filter((item) => item.id !== id));
+      void fetchApplications();
+    },
+    [fetchApplications],
+  );
 
   return (
     <div className="space-y-4">
@@ -182,7 +292,11 @@ export default function Admissions() {
           <TabsTrigger value="reports">Reports</TabsTrigger>
         </TabsList>
         <TabsContent value="applications">
-          <ApplicationsTab data={items} onUpdate={upsert} />
+          <ApplicationsTab
+            data={items}
+            onUpdate={upsert}
+            onDeleted={handleDeleted}
+          />
         </TabsContent>
         <TabsContent value="reports">
           <ReportsTab data={items} />
