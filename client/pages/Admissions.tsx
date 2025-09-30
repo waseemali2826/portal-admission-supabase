@@ -355,8 +355,71 @@ export default function Admissions() {
   };
 
   const handleDeleted = useCallback(
-    (id: string) => {
+    async (id: string) => {
+      // Remove from UI immediately for fast feedback
       setItems((prev) => prev.filter((item) => item.id !== id));
+
+      // Try server-side delete first (recommended)
+      try {
+        const resp = await fetch("/api/public/applications/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id }),
+        });
+        if (resp.ok) {
+          const payload = await resp.json();
+          if (payload?.ok) {
+            // Successfully deleted on server
+            return;
+          }
+        }
+      } catch (e) {
+        // continue to try direct Supabase delete
+        console.debug("Server delete failed, falling back to Supabase client", e);
+      }
+
+      // Fallback: try direct Supabase deletion (tries both app_id and id)
+      if (supabase) {
+        try {
+          const numeric = Number(id);
+          const values = Number.isFinite(numeric) ? [numeric, id] : [id];
+          const columns: Array<"app_id" | "id"> = ["app_id", "id"];
+
+          for (const column of columns) {
+            for (const value of values) {
+              try {
+                const { data, error } = await supabase
+                  .from("applications")
+                  .delete()
+                  .eq(column, value as any)
+                  .select("*")
+                  .limit(1);
+                if (!error && Array.isArray(data) && data.length > 0) {
+                  // deleted
+                  return;
+                }
+              } catch (innerErr) {
+                console.debug("Supabase deletion attempt failed", innerErr);
+              }
+            }
+          }
+        } catch (err) {
+          console.error("Supabase deletion error", err);
+        }
+      }
+
+      // Final fallback: remove from local public applications store
+      try {
+        const raw = getPublicApplications();
+        if (Array.isArray(raw)) {
+          const next = raw.filter((it: any) => String(it.id) !== String(id));
+          localStorage.setItem("public.applications", JSON.stringify(next));
+        }
+      } catch (e) {
+        console.error("Failed fallback local deletion", e);
+      }
+
+      // Refresh list to ensure consistency
       void fetchApplications();
     },
     [fetchApplications],
