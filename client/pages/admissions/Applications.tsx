@@ -349,7 +349,8 @@ export function ApplicationsTab({
                     size="sm"
                     variant="destructive"
                     onClick={() => {
-                      void handleDelete(r);
+                      // Delegate deletion to parent via onDeleted
+                      onDeleted?.(r.id);
                     }}
                   >
                     Delete
