@@ -142,10 +142,10 @@ export default function Enquiries() {
       (p: any): Enquiry => ({
         id: String(
           p.id ??
-          p.enquiry_id ??
-          p.created_at ??
-          crypto.randomUUID?.() ??
-          Date.now(),
+            p.enquiry_id ??
+            p.created_at ??
+            crypto.randomUUID?.() ??
+            Date.now(),
         ),
         name: p.name,
         course: p.course,
@@ -164,10 +164,10 @@ export default function Enquiries() {
       (p: any): Enquiry => ({
         id: String(
           p.id ??
-          p.enquiry_id ??
-          p.created_at ??
-          crypto.randomUUID?.() ??
-          Date.now(),
+            p.enquiry_id ??
+            p.created_at ??
+            crypto.randomUUID?.() ??
+            Date.now(),
         ),
         name: p.name,
         course: p.course,
@@ -289,7 +289,7 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
           setCourses(Array.from(new Set(names)));
           return;
         }
-      } catch { }
+      } catch {}
       setCourses(getAllCourseNames());
     };
     load();
@@ -379,7 +379,7 @@ function CreateEnquiry({ onCreated }: { onCreated: (row: any) => void }) {
               addLocalEnquiry({
                 id: String(
                   (Array.isArray(data) ? data[0]?.id : (data as any)?.id) ??
-                  `ENQ-${Date.now()}`,
+                    `ENQ-${Date.now()}`,
                 ),
                 name: payload.name,
                 course: payload.course,
@@ -773,7 +773,7 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                           onClick={() => {
                             try {
                               window.open(phoneLink(e.contact), "_blank");
-                            } catch { }
+                            } catch {}
                             toast({ title: `Calling ${e.contact}` });
                           }}
                         >
@@ -784,7 +784,7 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                           onClick={() => {
                             try {
                               window.open(smsLink(e.contact), "_blank");
-                            } catch { }
+                            } catch {}
                             toast({ title: `SMS to ${e.contact}` });
                           }}
                         >
@@ -796,7 +796,7 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                             if (e.email) {
                               try {
                                 window.open(`mailto:${e.email}`);
-                              } catch { }
+                              } catch {}
                             }
                             toast({ title: `Email to ${e.email || "N/A"}` });
                           }}
@@ -820,7 +820,7 @@ function FollowTable({ data }: { data: Enquiry[] }) {
                                 ),
                                 "_blank",
                               );
-                            } catch { }
+                            } catch {}
                             toast({ title: `WhatsApp to ${e.contact}` });
                           }}
                         >
