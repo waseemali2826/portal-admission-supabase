@@ -204,6 +204,18 @@ export function ApplicationsTab({
       return Boolean(payload?.ok);
     } catch (error) {
       console.error("Failed to delete application via API", error);
+      try {
+        // Fallback: remove from local public applications store if present
+        const raw = localStorage.getItem("public.applications") || localStorage.getItem("public.applications") || "[]";
+        const arr = JSON.parse(raw || "[]");
+        if (Array.isArray(arr)) {
+          const next = arr.filter((it: any) => String(it.id) !== String(targetId));
+          localStorage.setItem("public.applications", JSON.stringify(next));
+          return true;
+        }
+      } catch (e) {
+        // ignore
+      }
       return false;
     }
   };
