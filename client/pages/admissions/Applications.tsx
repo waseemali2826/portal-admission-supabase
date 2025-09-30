@@ -193,31 +193,46 @@ export function ApplicationsTab({
   };
 
   const deleteViaApi = async (targetId: string) => {
+    // Try POST JSON first
     try {
       const response = await fetch("/api/public/applications/delete", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: targetId }),
       });
-      if (!response.ok) return false;
-      const payload = await response.json();
-      return Boolean(payload?.ok);
-    } catch (error) {
-      console.error("Failed to delete application via API", error);
-      try {
-        // Fallback: remove from local public applications store if present
-        const raw = localStorage.getItem("public.applications") || localStorage.getItem("public.applications") || "[]";
-        const arr = JSON.parse(raw || "[]");
-        if (Array.isArray(arr)) {
-          const next = arr.filter((it: any) => String(it.id) !== String(targetId));
-          localStorage.setItem("public.applications", JSON.stringify(next));
-          return true;
-        }
-      } catch (e) {
-        // ignore
+      if (response.ok) {
+        const payload = await response.json();
+        if (payload?.ok) return true;
       }
-      return false;
+    } catch (error) {
+      console.error("Failed to delete application via API (POST)", error);
     }
+
+    // Try GET fallback (some hosts might prefer query params)
+    try {
+      const resp = await fetch(`/api/public/applications/delete?id=${encodeURIComponent(targetId)}`);
+      if (resp.ok) {
+        const payload = await resp.json();
+        if (payload?.ok) return true;
+      }
+    } catch (error) {
+      console.error("Failed to delete application via API (GET)", error);
+    }
+
+    // Final fallback: remove from local public applications store
+    try {
+      const raw = localStorage.getItem("public.applications") || "[]";
+      const arr = JSON.parse(raw || "[]");
+      if (Array.isArray(arr)) {
+        const next = arr.filter((it: any) => String(it.id) !== String(targetId));
+        localStorage.setItem("public.applications", JSON.stringify(next));
+        return true;
+      }
+    } catch (e) {
+      console.error("Failed to remove from local store", e);
+    }
+
+    return false;
   };
 
   const handleDelete = async (record: AdmissionRecord) => {
