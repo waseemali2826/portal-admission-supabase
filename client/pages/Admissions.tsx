@@ -93,6 +93,7 @@ import type { AdmissionRecord } from "./admissions/types";
 import { ApplicationsTab } from "./admissions/Applications";
 import { ReportsTab } from "./admissions/Reports";
 import { supabase } from "@/lib/supabaseClient";
+import { getPublicApplications } from "@/lib/publicStore";
 
 export default function Admissions() {
   const [items, setItems] = useState<AdmissionRecord[]>([]);
