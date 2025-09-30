@@ -225,7 +225,7 @@ export const deletePublicApplication: RequestHandler = async (req, res) => {
               .from(table)
               .delete()
               .eq(column, value as any)
-              .select("id")
+              .select("*")
               .limit(1);
             if (!error && (data?.length ?? 0) > 0) {
               return res.json({ ok: true, removedId: targetId, source: table });
