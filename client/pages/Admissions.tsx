@@ -175,6 +175,7 @@ export default function Admissions() {
     }
 
     try {
+      // Try to fetch from server API; if it fails, fallback to local stored public applications
       const response = await fetch("/api/public/applications");
       if (response.ok) {
         const payload = await response.json();
@@ -216,9 +217,91 @@ export default function Admissions() {
               : undefined,
           });
         }
+      } else {
+        // non-OK response, fallback to local storage
+        const items = getPublicApplications();
+        for (const entry of items) {
+          const rawId = entry.id ?? entry.app_id ?? entry.appId;
+          if (!rawId) continue;
+          const id = String(rawId);
+          if (records.has(id)) continue;
+          const created = entry.createdAt ?? new Date().toISOString();
+          const dueDate =
+            entry.preferredStart ??
+            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          records.set(id, {
+            id,
+            createdAt: String(created),
+            status: "Pending",
+            student: {
+              name: String(entry.name ?? ""),
+              email: String(entry.email ?? ""),
+              phone: String(entry.phone ?? ""),
+            },
+            course: String(entry.course ?? ""),
+            batch: "TBD",
+            campus: "Main",
+            fee: {
+              total: 0,
+              installments: [
+                {
+                  id: "due",
+                  amount: 0,
+                  dueDate,
+                },
+              ],
+            },
+            documents: [],
+            notes: entry.preferredStart
+              ? `Preferred start: ${entry.preferredStart}`
+              : undefined,
+          });
+        }
       }
     } catch (error) {
-      console.error("Error fetching applications from API:", error);
+      // network or other failure: fallback to local stored public applications
+      try {
+        const items = getPublicApplications();
+        for (const entry of items) {
+          const rawId = entry.id ?? entry.app_id ?? entry.appId;
+          if (!rawId) continue;
+          const id = String(rawId);
+          if (records.has(id)) continue;
+          const created = entry.createdAt ?? new Date().toISOString();
+          const dueDate =
+            entry.preferredStart ??
+            new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+          records.set(id, {
+            id,
+            createdAt: String(created),
+            status: "Pending",
+            student: {
+              name: String(entry.name ?? ""),
+              email: String(entry.email ?? ""),
+              phone: String(entry.phone ?? ""),
+            },
+            course: String(entry.course ?? ""),
+            batch: "TBD",
+            campus: "Main",
+            fee: {
+              total: 0,
+              installments: [
+                {
+                  id: "due",
+                  amount: 0,
+                  dueDate,
+                },
+              ],
+            },
+            documents: [],
+            notes: entry.preferredStart
+              ? `Preferred start: ${entry.preferredStart}`
+              : undefined,
+          });
+        }
+      } catch (e) {
+        // swallow
+      }
     }
 
     const ordered = Array.from(records.values()).sort((a, b) => {
